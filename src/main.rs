@@ -2,10 +2,15 @@ use rltk::prelude::*;
 use specs::prelude::*;
 
 //All mods
-mod pieces;
-use crate::pieces::game_state::*;
-use crate::pieces::components::*;
-use crate::pieces::map::*;
+mod map;
+mod rect;
+mod player;
+mod components;
+mod game_state;
+
+use map::*;
+use game_state::*;
+use components::*;
 
 //main
 fn main() -> rltk::BError {
