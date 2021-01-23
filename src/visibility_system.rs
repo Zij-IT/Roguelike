@@ -16,7 +16,6 @@ impl <'a> System <'a> for VisibilitySystem {
         let (mut map, entities, mut viewsheds, poses, players) = data;
 
         for (ent, viewshed, pos) in (&entities, &mut viewsheds, &poses).join() {
-            viewshed.visible_tiles.clear();
             if viewshed.is_dirty {
                 viewshed.is_dirty = false;
                 viewshed.visible_tiles.clear();
@@ -27,7 +26,7 @@ impl <'a> System <'a> for VisibilitySystem {
                 );
                 viewshed.visible_tiles.retain(|t| t.x >= 0 && t.x < map.width &&
                                               t.y >= 0 && t.y < map.height);
-                if let Some(_) = players.get(ent) {
+                if players.get(ent).is_some() {
                     for t in map.visible_tiles.iter_mut() { *t = false };
                     for vis in viewshed.visible_tiles.iter() {
                         let idx = map.xy_idx(vis.x, vis.y);
