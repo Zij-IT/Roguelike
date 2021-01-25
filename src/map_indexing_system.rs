@@ -10,15 +10,20 @@ pub struct MapIndexingSystem {}
 impl<'a> System<'a> for MapIndexingSystem {
     type SystemData = ( WriteExpect<'a, Map>,
                         ReadStorage<'a, Position>,
-                        ReadStorage<'a, BlocksTile>);
+                        ReadStorage<'a, BlocksTile>,
+                        Entities<'a, >,);
     
     fn run(&mut self, data : Self::SystemData) {
-        let (mut map, position, blockers) = data;
+        let (mut map, position, blockers, entities) = data;
 
         map.populate_blocked();
-        for (position, _) in (&position, &blockers).join() {
+        map.clear_content_index();
+        for (position, entity) in (&position, &entities).join() {
             let idx = map.xy_idx(position.x, position.y);
-            map.blocked_tiles[idx] = true;
+            if blockers.get(entity).is_some() {
+                map.blocked_tiles[idx] = true;
+            }
+            map.tile_content[idx].push(entity);
         }
     }
 }

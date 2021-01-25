@@ -16,6 +16,7 @@ pub struct Map {
     pub revealed_tiles : Vec<bool>,
     pub visible_tiles : Vec<bool>,
     pub blocked_tiles : Vec<bool>,
+    pub tile_content : Vec<Vec<Entity>>,
     pub rooms : Vec<rect::Rect>,
     pub width : i32,
     pub height : i32,
@@ -26,12 +27,13 @@ impl Map {
     pub fn new_map_rooms_and_corridors() -> Map {
         let mut map = Map {
             tiles : vec![TileType::Wall; (MAP_WIDTH * MAP_HEIGHT) as usize], 
-            revealed_tiles : vec![false; (MAP_WIDTH * MAP_HEIGHT) as usize],
-            visible_tiles : vec![false; (MAP_WIDTH * MAP_HEIGHT) as usize],
-            blocked_tiles : vec![false; (MAP_WIDTH * MAP_HEIGHT) as usize],
-            rooms : vec![],
-            width : MAP_WIDTH,
-            height : MAP_HEIGHT,
+            revealed_tiles: vec![false; (MAP_WIDTH * MAP_HEIGHT) as usize],
+            visible_tiles: vec![false; (MAP_WIDTH * MAP_HEIGHT) as usize],
+            blocked_tiles: vec![false; (MAP_WIDTH * MAP_HEIGHT) as usize],
+            tile_content: vec![Vec::new(); (MAP_WIDTH * MAP_HEIGHT) as usize],
+            rooms: vec![],
+            width: MAP_WIDTH,
+            height: MAP_HEIGHT,
         };
 
         const MAX_ROOMS: i32 = 30;
@@ -77,6 +79,12 @@ impl Map {
     pub fn populate_blocked(&mut self) {
         for (i, tile) in self.tiles.iter_mut().enumerate() {
             self.blocked_tiles[i] = *tile == TileType::Wall;
+        }
+    }
+
+    pub fn clear_content_index(&mut self) {
+        for content in self.tile_content.iter_mut() {
+            content.clear();
         }
     }
 

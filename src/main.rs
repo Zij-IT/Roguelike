@@ -6,15 +6,19 @@ mod map;
 mod rect;
 mod player;
 mod components;
+mod damage_system;
 mod visibility_system;
 mod monster_ai_system;
+mod melee_combat_system;
 mod map_indexing_system;
 
 use map::*;
 use player::*;
 use components::*;
+use damage_system::*;
 use visibility_system::*;
 use monster_ai_system::*;
+use melee_combat_system::*;
 use map_indexing_system::*;
 
 //Enums
@@ -31,13 +35,17 @@ pub struct State {
 
 impl State {
     fn run_systems(&mut self) {
-        let mut vis = VisibilitySystem{};
         let mut mons = MonsterAI{};
+        let mut damage = DamageSystem{};
+        let mut vis = VisibilitySystem{};
+        let mut melee = MeleeCombatSystem{};
         let mut mapindex = MapIndexingSystem{};
 
         vis.run_now(&self.ecs);
         mons.run_now(&self.ecs);
         mapindex.run_now(&self.ecs);
+        melee.run_now(&self.ecs);
+        damage.run_now(&self.ecs);
 
         self.ecs.maintain();
     } 
@@ -50,6 +58,7 @@ impl GameState for State {
         //Runs all non-player systems (for now)
         if self.run_state == RunState::Running {
             self.run_systems();
+            DamageSystem::delete_the_dead(&mut self.ecs);
             self.run_state = RunState::Paused;
         } else {
             self.run_state = player_input(self, ctx);
@@ -93,6 +102,9 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Monster>();
     gs.ecs.register::<Name>();
     gs.ecs.register::<BlocksTile>();
+    gs.ecs.register::<CombatStats>();
+    gs.ecs.register::<SufferDamage>();
+    gs.ecs.register::<WantsToMelee>();
 
     //Create map and get player location
     let map = Map::new_map_rooms_and_corridors();
@@ -110,6 +122,7 @@ fn main() -> rltk::BError {
         })
         .with(Viewshed{visible_tiles: Vec::new(), range: 8, is_dirty: true})
         .with(Name{name: "Player".to_string()})
+        .with(CombatStats{max_hp: 30, hp: 30, defense: 2, power: 5})
         .build();
 
     //Create test monsters
@@ -134,6 +147,7 @@ fn main() -> rltk::BError {
             .with(Monster{})
             .with(BlocksTile{})
             .with(Name{name:format!("{} #{}", name, i)})
+            .with(CombatStats{max_hp: 16, hp: 16, defense: 1, power: 4})
             .build();
     }
 
