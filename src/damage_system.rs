@@ -1,18 +1,12 @@
+use super::{CombatStats, GameLog, Name, Player, SufferDamage};
 use specs::prelude::*;
-use super::{
-    SufferDamage,
-    CombatStats,
-    GameLog,
-    Player,
-    Name,
-};
 
 pub struct DamageSystem {}
 
 impl<'a> System<'a> for DamageSystem {
-    type SystemData = ( 
-                        WriteStorage<'a, CombatStats>,
-                        WriteStorage<'a, SufferDamage>
+    type SystemData = (
+        WriteStorage<'a, CombatStats>,
+        WriteStorage<'a, SufferDamage>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -28,7 +22,7 @@ impl<'a> System<'a> for DamageSystem {
 
 impl DamageSystem {
     pub fn delete_the_dead(ecs: &mut World) {
-        let mut dead : Vec<Entity> = Vec::new();
+        let mut dead: Vec<Entity> = Vec::new();
         //This needs to be enclosed, or entities is seen as being borrowed immutably and mutably
         {
             let mut all_stats = ecs.write_storage::<CombatStats>();
@@ -39,12 +33,12 @@ impl DamageSystem {
             for (entity, stats) in (&entities, &mut all_stats).join() {
                 if stats.hp < 1 {
                     match players.get(entity) {
-                        None => { 
+                        None => {
                             dead.push(entity);
                             if let Some(name) = names.get(entity) {
                                 log.entries.push(format!("{} is dead", &name.name));
                             }
-                        },
+                        }
                         Some(_) => stats.hp = stats.max_hp as i32,
                     }
                 }
@@ -53,5 +47,5 @@ impl DamageSystem {
         for victim in dead {
             ecs.delete_entity(victim).expect("Unable to delete victim");
         }
-    } 
+    }
 }

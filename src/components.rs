@@ -29,7 +29,7 @@ pub struct Monster {}
 
 #[derive(Component)]
 pub struct Name {
-    pub name: String
+    pub name: String,
 }
 
 #[derive(Component)]
@@ -45,21 +45,22 @@ pub struct CombatStats {
 
 #[derive(Component)]
 pub struct WantsToMelee {
-    pub target: Entity
+    pub target: Entity,
 }
 
 #[derive(Component)]
 pub struct SufferDamage {
-    pub amount: Vec<i32>
+    pub amount: Vec<i32>,
 }
 
 impl SufferDamage {
-    pub fn new_damage(store: &mut WriteStorage<SufferDamage>, victim : Entity, amount: i32) {
+    pub fn new_damage(store: &mut WriteStorage<SufferDamage>, victim: Entity, amount: i32) {
         if let Some(suffering) = store.get_mut(victim) {
             suffering.amount.push(amount);
-        }
-        else {
-            let dmg = SufferDamage { amount: vec![amount] };
+        } else {
+            let dmg = SufferDamage {
+                amount: vec![amount],
+            };
             store.insert(victim, dmg).expect("Unable to insert damage");
         }
     }

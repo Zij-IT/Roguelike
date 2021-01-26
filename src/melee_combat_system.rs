@@ -1,23 +1,17 @@
+use super::{CombatStats, GameLog, Name, SufferDamage, WantsToMelee};
 use specs::prelude::*;
-use super::{
-    CombatStats,
-    WantsToMelee,
-    Name,
-    SufferDamage,
-    GameLog,
-};
 
 pub struct MeleeCombatSystem {}
 
 impl<'a> System<'a> for MeleeCombatSystem {
     #[allow(clippy::type_complexity)]
-    type SystemData = ( 
-                        WriteExpect<'a, GameLog>,
-                        WriteStorage<'a, WantsToMelee>,
-                        WriteStorage<'a, SufferDamage>,
-                        ReadStorage<'a, CombatStats>,
-                        ReadStorage<'a, Name>,
-                        Entities<'a>,
+    type SystemData = (
+        WriteExpect<'a, GameLog>,
+        WriteStorage<'a, WantsToMelee>,
+        WriteStorage<'a, SufferDamage>,
+        ReadStorage<'a, CombatStats>,
+        ReadStorage<'a, Name>,
+        Entities<'a>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -31,17 +25,10 @@ impl<'a> System<'a> for MeleeCombatSystem {
                     let damage = i32::max(0, stats.power - target_stats.defense);
                     let message;
                     if damage == 0 {
-                        message = format!("{} is unable to hurt {}.", 
-                            &name.name, 
-                            target_name
-                        );
-                    }
-                    else {
-                        message = format!("{} hits {} for {} damage.", 
-                            &name.name, 
-                            target_name, 
-                            damage
-                        );
+                        message = format!("{} is unable to hurt {}.", &name.name, target_name);
+                    } else {
+                        message =
+                            format!("{} hits {} for {} damage.", &name.name, target_name, damage);
                         SufferDamage::new_damage(&mut damages, attack.target, damage);
                     }
                     gamelog.entries.push(message.to_string());

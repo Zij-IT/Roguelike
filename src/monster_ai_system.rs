@@ -1,59 +1,59 @@
+use super::{Map, Monster, Position, RunState, Viewshed, WantsToMelee};
+use rltk::Point;
 use specs::prelude::*;
-use super::{
-    Viewshed,
-    Position,
-    Map,
-    Monster,
-    WantsToMelee,
-    RunState,
-};
-use rltk::{
-    Point,
-};
 
-pub struct MonsterAI{}
+pub struct MonsterAI {}
 impl<'a> System<'a> for MonsterAI {
     #[allow(clippy::type_complexity)]
-    type SystemData = ( 
-                        WriteExpect< 'a, Map>,
-                        WriteStorage<'a, Position>,
-                        WriteStorage<'a, Viewshed>,
-                        WriteStorage<'a, WantsToMelee>,
-                        ReadStorage< 'a, Monster>,
-                        ReadExpect<  'a, Point>,
-                        ReadExpect< 'a, Entity>,
-                        ReadExpect<'a, RunState>,
-                        Entities<'a>,
+    type SystemData = (
+        WriteExpect<'a, Map>,
+        WriteStorage<'a, Position>,
+        WriteStorage<'a, Viewshed>,
+        WriteStorage<'a, WantsToMelee>,
+        ReadStorage<'a, Monster>,
+        ReadExpect<'a, Point>,
+        ReadExpect<'a, Entity>,
+        ReadExpect<'a, RunState>,
+        Entities<'a>,
     );
-    
-    fn run(&mut self, data : Self::SystemData) {
-        let (map, 
-             mut positions, 
-             mut viewsheds, 
-             mut attacks, 
-             monsters, 
-             player_pos, 
-             player_ent, 
-             runstate,
-             entities,
+
+    fn run(&mut self, data: Self::SystemData) {
+        let (
+            map,
+            mut positions,
+            mut viewsheds,
+            mut attacks,
+            monsters,
+            player_pos,
+            player_ent,
+            runstate,
+            entities,
         ) = data;
+        if *runstate != RunState::MonsterTurn {
+            return;
+        }
 
-        if *runstate != RunState::MonsterTurn { return; }
-
-        for (mut vs, mut pos, ent, _) in (&mut viewsheds, &mut positions, &entities, &monsters).join() {
+        for (mut vs, mut pos, ent, _) in
+            (&mut viewsheds, &mut positions, &entities, &monsters).join()
+        {
             //If monster can see player attack if within range or approach
             if vs.visible_tiles.contains(&*player_pos) {
-                let distance = rltk::DistanceAlg::Pythagoras.distance2d(Point::new(pos.x, pos.y), *player_pos);
+                let distance =
+                    rltk::DistanceAlg::Pythagoras.distance2d(Point::new(pos.x, pos.y), *player_pos);
                 if distance <= 1.0 {
                     attacks
-                        .insert(ent, WantsToMelee{target: *player_ent})
+                        .insert(
+                            ent,
+                            WantsToMelee {
+                                target: *player_ent,
+                            },
+                        )
                         .expect("Unable to insert attack");
-                }
-                else {
+                } else {
                     let path = rltk::a_star_search(
                         map.xy_idx(pos.x, pos.y) as i32,
                         map.xy_idx(player_pos.x, player_pos.y) as i32,
-                        &*map
+                        &*map,
                     );
 
                     if path.success && path.steps.len() > 1 {
@@ -62,7 +62,6 @@ impl<'a> System<'a> for MonsterAI {
                         vs.is_dirty = true;
                     }
                 }
-
             }
         }
     }

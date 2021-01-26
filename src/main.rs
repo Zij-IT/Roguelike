@@ -2,29 +2,29 @@ use rltk::prelude::*;
 use specs::prelude::*;
 
 //All mods
-mod map;
-mod gui;
-mod rect;
-mod player;
-mod gamelog;
-mod spawner;
 mod components;
 mod damage_system;
-mod visibility_system;
-mod monster_ai_system;
-mod melee_combat_system;
+mod gamelog;
+mod gui;
+mod map;
 mod map_indexing_system;
+mod melee_combat_system;
+mod monster_ai_system;
+mod player;
+mod rect;
+mod spawner;
+mod visibility_system;
 
-use map::*;
-use player::*;
-use gamelog::*;
-use spawner::*;
 use components::*;
 use damage_system::*;
-use visibility_system::*;
-use monster_ai_system::*;
-use melee_combat_system::*;
+use gamelog::*;
+use map::*;
 use map_indexing_system::*;
+use melee_combat_system::*;
+use monster_ai_system::*;
+use player::*;
+use spawner::*;
+use visibility_system::*;
 
 //Enums
 #[derive(PartialEq, Copy, Clone)]
@@ -41,11 +41,11 @@ pub struct State {
 
 impl State {
     fn run_systems(&mut self) {
-        let mut mons = MonsterAI{};
-        let mut damage = DamageSystem{};
-        let mut vis = VisibilitySystem{};
-        let mut melee = MeleeCombatSystem{};
-        let mut mapindex = MapIndexingSystem{};
+        let mut mons = MonsterAI {};
+        let mut damage = DamageSystem {};
+        let mut vis = VisibilitySystem {};
+        let mut melee = MeleeCombatSystem {};
+        let mut mapindex = MapIndexingSystem {};
 
         vis.run_now(&self.ecs);
         mons.run_now(&self.ecs);
@@ -54,11 +54,11 @@ impl State {
         damage.run_now(&self.ecs);
 
         self.ecs.maintain();
-    } 
+    }
 }
 
 impl GameState for State {
-    fn tick(&mut self, ctx : &mut Rltk) {
+    fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
 
         let mut next_state = *self.ecs.fetch::<RunState>();
@@ -81,7 +81,7 @@ impl GameState for State {
                 next_state = RunState::AwaitingInput;
             }
         }
-        
+
         //If a resource of a similar type is added, it is overwritten => overwriting old value
         self.ecs.insert::<RunState>(next_state);
 
@@ -104,9 +104,7 @@ impl GameState for State {
     }
 }
 
-//main
 fn main() -> BError {
-    //Creating context
     let context = RltkBuilder::simple80x50()
         .with_title("Bashing Bytes")
         .build()?;
@@ -115,26 +113,26 @@ fn main() -> BError {
     let mut gs = State { ecs: World::new() };
 
     //Registering a components
-    gs.ecs.register::<SufferDamage>();
-    gs.ecs.register::<WantsToMelee>();
-    gs.ecs.register::<CombatStats>();
     gs.ecs.register::<BlocksTile>();
-    gs.ecs.register::<Renderable>();
-    gs.ecs.register::<Viewshed>();
-    gs.ecs.register::<Position>();
+    gs.ecs.register::<CombatStats>();
     gs.ecs.register::<Monster>();
-    gs.ecs.register::<Player>();
     gs.ecs.register::<Name>();
+    gs.ecs.register::<Renderable>();
+    gs.ecs.register::<SufferDamage>();
+    gs.ecs.register::<Position>();
+    gs.ecs.register::<Player>();
+    gs.ecs.register::<Viewshed>();
+    gs.ecs.register::<WantsToMelee>();
 
     //Create map and get player location
     let map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
 
-    //Build player
-    let player_ent = spawn_player(&mut gs.ecs, player_x, player_y); 
-
-    //Create test monsters
+    //RNG!
     gs.ecs.insert(rltk::RandomNumberGenerator::new());
+
+    //Build entities
+    let player_ent = spawn_player(&mut gs.ecs, player_x, player_y);
     for room in map.rooms.iter().skip(1) {
         populate_room(&mut gs.ecs, &room);
     }
@@ -144,7 +142,9 @@ fn main() -> BError {
     gs.ecs.insert(player_ent);
     gs.ecs.insert(Point::new(player_x, player_y));
     gs.ecs.insert(RunState::PreRun);
-    gs.ecs.insert(GameLog{entries: vec!["Welcome to my roguelike".to_string()]});
+    gs.ecs.insert(GameLog {
+        entries: vec!["Welcome to my roguelike".to_string()],
+    });
 
     //Start game
     main_loop(context, gs)
