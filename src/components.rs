@@ -64,3 +64,6 @@ impl SufferDamage {
         }
     }
 }
+
+#[derive(Component)]
+pub struct Item {}
