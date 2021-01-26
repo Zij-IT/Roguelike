@@ -7,6 +7,7 @@ mod gui;
 mod rect;
 mod player;
 mod gamelog;
+mod spawner;
 mod components;
 mod damage_system;
 mod visibility_system;
@@ -17,6 +18,7 @@ mod map_indexing_system;
 use map::*;
 use player::*;
 use gamelog::*;
+use spawner::*;
 use components::*;
 use damage_system::*;
 use visibility_system::*;
@@ -110,65 +112,31 @@ fn main() -> BError {
         .build()?;
 
     //Construct world
-    let mut gs = State { 
-        ecs: World::new(),
-    };
+    let mut gs = State { ecs: World::new() };
 
     //Registering a components
-    gs.ecs.register::<Position>();
-    gs.ecs.register::<Renderable>();
-    gs.ecs.register::<Player>();
-    gs.ecs.register::<Viewshed>();
-    gs.ecs.register::<Monster>();
-    gs.ecs.register::<Name>();
-    gs.ecs.register::<BlocksTile>();
-    gs.ecs.register::<CombatStats>();
     gs.ecs.register::<SufferDamage>();
     gs.ecs.register::<WantsToMelee>();
+    gs.ecs.register::<CombatStats>();
+    gs.ecs.register::<BlocksTile>();
+    gs.ecs.register::<Renderable>();
+    gs.ecs.register::<Viewshed>();
+    gs.ecs.register::<Position>();
+    gs.ecs.register::<Monster>();
+    gs.ecs.register::<Player>();
+    gs.ecs.register::<Name>();
 
     //Create map and get player location
     let map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
 
     //Build player
-    let player_ent = gs.ecs
-        .create_entity()
-        .with(Position {x: player_x, y: player_y})
-        .with(Player{})
-        .with(Renderable {
-            glyph: to_cp437('@'),
-            fg: RGB::named(YELLOW),
-            bg: RGB::named(BLACK),
-        })
-        .with(Viewshed{visible_tiles: Vec::new(), range: 8, is_dirty: true})
-        .with(Name{name: "Player".to_string()})
-        .with(CombatStats{max_hp: 30, hp: 30, defense: 2, power: 5})
-        .build();
+    let player_ent = spawn_player(&mut gs.ecs, player_x, player_y); 
 
     //Create test monsters
-    let mut rng = RandomNumberGenerator::new();
-    for (i, room) in map.rooms.iter().skip(1).enumerate() {
-        let (x, y) = room.center();
-        let roll = rng.roll_dice(1, 2);
-        let glyph : FontCharType;
-        let name : String;
-        match roll {
-            1 => { glyph = to_cp437('k'); name = "Kobold".to_string(); },
-            _ => { glyph = to_cp437('g'); name = "Goblin".to_string(); },
-        };
-        gs.ecs.create_entity()
-            .with(Position{x, y})
-            .with(Renderable{
-                glyph,
-                fg: RGB::named(RED),
-                bg: RGB::named(BLACK), 
-            })
-            .with(Viewshed{visible_tiles: Vec::new(), range: 8, is_dirty: true})
-            .with(Monster{})
-            .with(BlocksTile{})
-            .with(Name{name:format!("{} #{}", name, i)})
-            .with(CombatStats{max_hp: 16, hp: 16, defense: 1, power: 4})
-            .build();
+    gs.ecs.insert(rltk::RandomNumberGenerator::new());
+    for room in map.rooms.iter().skip(1) {
+        populate_room(&mut gs.ecs, &room);
     }
 
     //Insert resources into world
