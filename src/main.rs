@@ -3,8 +3,10 @@ use specs::prelude::*;
 
 //All mods
 mod map;
+mod gui;
 mod rect;
 mod player;
+mod gamelog;
 mod components;
 mod damage_system;
 mod visibility_system;
@@ -14,6 +16,7 @@ mod map_indexing_system;
 
 use map::*;
 use player::*;
+use gamelog::*;
 use components::*;
 use damage_system::*;
 use visibility_system::*;
@@ -24,13 +27,14 @@ use map_indexing_system::*;
 //Enums
 #[derive(PartialEq, Copy, Clone)]
 pub enum RunState {
-    Paused,
-    Running,
+    PreRun,
+    AwaitingInput,
+    PlayerTurn,
+    MonsterTurn,
 }
 
 pub struct State {
     pub ecs: World,
-    pub run_state : RunState,
 }
 
 impl State {
@@ -55,34 +59,51 @@ impl GameState for State {
     fn tick(&mut self, ctx : &mut Rltk) {
         ctx.cls();
 
-        //Runs all non-player systems (for now)
-        if self.run_state == RunState::Running {
-            self.run_systems();
-            DamageSystem::delete_the_dead(&mut self.ecs);
-            self.run_state = RunState::Paused;
-        } else {
-            self.run_state = player_input(self, ctx);
+        let mut next_state = *self.ecs.fetch::<RunState>();
+
+        //FSM
+        match next_state {
+            RunState::PreRun => {
+                self.run_systems();
+                next_state = RunState::AwaitingInput;
+            }
+            RunState::AwaitingInput => {
+                next_state = player_input(self, ctx);
+            }
+            RunState::PlayerTurn => {
+                self.run_systems();
+                next_state = RunState::MonsterTurn;
+            }
+            RunState::MonsterTurn => {
+                self.run_systems();
+                next_state = RunState::AwaitingInput;
+            }
         }
+        
+        //If a resource of a similar type is added, it is overwritten => overwriting old value
+        self.ecs.insert::<RunState>(next_state);
 
-        //Draw map
+        DamageSystem::delete_the_dead(&mut self.ecs);
+
+        //Draw map & entities
         draw_map(&self.ecs, ctx);
-
-        //Displays all entities with positions and renderables
         let positions = self.ecs.read_storage::<Position>();
         let renderables = self.ecs.read_storage::<Renderable>();
         let map = self.ecs.fetch::<Map>();
-
         for (pos, render) in (&positions, &renderables).join() {
             let idx = map.xy_idx(pos.x, pos.y);
             if map.visible_tiles[idx] {
                 ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
             }
         }
+
+        //GUI
+        gui::draw_ui(&self.ecs, ctx);
     }
 }
 
 //main
-fn main() -> rltk::BError {
+fn main() -> BError {
     //Creating context
     let context = RltkBuilder::simple80x50()
         .with_title("Bashing Bytes")
@@ -91,7 +112,6 @@ fn main() -> rltk::BError {
     //Construct world
     let mut gs = State { 
         ecs: World::new(),
-        run_state: RunState::Running,
     };
 
     //Registering a components
@@ -111,12 +131,12 @@ fn main() -> rltk::BError {
     let (player_x, player_y) = map.rooms[0].center();
 
     //Build player
-    gs.ecs
+    let player_ent = gs.ecs
         .create_entity()
         .with(Position {x: player_x, y: player_y})
         .with(Player{})
         .with(Renderable {
-            glyph: rltk::to_cp437('@'),
+            glyph: to_cp437('@'),
             fg: RGB::named(YELLOW),
             bg: RGB::named(BLACK),
         })
@@ -126,22 +146,22 @@ fn main() -> rltk::BError {
         .build();
 
     //Create test monsters
-    let mut rng = rltk::RandomNumberGenerator::new();
+    let mut rng = RandomNumberGenerator::new();
     for (i, room) in map.rooms.iter().skip(1).enumerate() {
         let (x, y) = room.center();
         let roll = rng.roll_dice(1, 2);
-        let glyph : rltk::FontCharType;
+        let glyph : FontCharType;
         let name : String;
         match roll {
-            1 => { glyph = rltk::to_cp437('k'); name = "Kobold".to_string(); },
-            _ => { glyph = rltk::to_cp437('g'); name = "Goblin".to_string(); },
+            1 => { glyph = to_cp437('k'); name = "Kobold".to_string(); },
+            _ => { glyph = to_cp437('g'); name = "Goblin".to_string(); },
         };
         gs.ecs.create_entity()
             .with(Position{x, y})
             .with(Renderable{
                 glyph,
-                fg: RGB::named(rltk::RED),
-                bg: RGB::named(rltk::BLACK), 
+                fg: RGB::named(RED),
+                bg: RGB::named(BLACK), 
             })
             .with(Viewshed{visible_tiles: Vec::new(), range: 8, is_dirty: true})
             .with(Monster{})
@@ -153,8 +173,11 @@ fn main() -> rltk::BError {
 
     //Insert resources into world
     gs.ecs.insert(map);
+    gs.ecs.insert(player_ent);
     gs.ecs.insert(Point::new(player_x, player_y));
+    gs.ecs.insert(RunState::PreRun);
+    gs.ecs.insert(GameLog{entries: vec!["Welcome to my roguelike".to_string()]});
 
     //Start game
-    rltk::main_loop(context, gs)
+    main_loop(context, gs)
 }

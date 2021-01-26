@@ -2,7 +2,7 @@ use rltk::{ RGB, Rltk, Point, Algorithm2D, BaseMap };
 use super::{rect};
 use specs::prelude::*;
 
-pub const MAP_HEIGHT: i32 = 50;
+pub const MAP_HEIGHT: i32 = 43;
 pub const MAP_WIDTH: i32 = 80;
 
 #[derive(PartialEq, Copy, Clone)]
@@ -126,6 +126,10 @@ impl Map {
 impl Algorithm2D for Map {
     fn dimensions(&self) -> Point {
         Point::new(self.width, self.height)
+    }
+
+    fn in_bounds(&self, pos: Point) -> bool {
+        pos.x < self.width && pos.y < self.height && pos.x >= 0 && pos.y >= 0
     }
 }
 
