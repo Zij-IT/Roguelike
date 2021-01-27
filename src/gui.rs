@@ -13,7 +13,7 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
     );
     let combat_stats = ecs.read_storage::<CombatStats>();
     let players = ecs.read_storage::<Player>();
-    let log = ecs.fetch::<GameLog>();
+    let mut log = ecs.write_resource::<GameLog>();
     for (_, stats) in (&players, &combat_stats).join() {
         let mut y = 44;
         for entry in log.entries.iter().rev() {
@@ -21,6 +21,10 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
                 ctx.print(2, y, entry);
             }
             y += 1;
+        }
+        if log.entries.len() > 5 {
+            let len = log.entries.len();
+            log.entries.drain(0..len - 5);
         }
         let health = format!(" HP {} / {} ", stats.hp, stats.max_hp);
         ctx.print_color(
