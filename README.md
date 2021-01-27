@@ -4,10 +4,10 @@ So this is mainly to just work on my ability to have a long term project, and to
 
 # Current Goals
 - [ ] Procedurally generated map
-- [ ] One melee based enemy
+- [x] One melee based enemy
 - [ ] One ranged based enemy
-- [ ] Health
-- [ ] Combat
+- [x] Health
+- [x] Combat
 
 As I mark off goals, I will add new ones, but this is a good starting point for now.
 
