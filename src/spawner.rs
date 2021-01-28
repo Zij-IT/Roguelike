@@ -1,5 +1,6 @@
 use super::{
-    rect::Rect, BlocksTile, CombatStats, Monster, Name, Player, Position, Renderable, Viewshed,
+    rect::Rect, BlocksTile, CombatStats, Item, Monster, Name, Player, Position, Potion, Renderable,
+    Viewshed,
 };
 use rltk::{RandomNumberGenerator, RGB};
 use specs::prelude::*;
@@ -74,10 +75,28 @@ pub fn spawn_monster(
         .build()
 }
 
+pub fn spawn_health_pot(ecs: &mut World, x: i32, y: i32) -> Entity {
+    ecs.create_entity()
+        .with(Position { x, y })
+        .with(Item {})
+        .with(Potion { heal_amount: 8 })
+        .with(Name {
+            name: "Health Potion".to_string(),
+        })
+        .with(Renderable {
+            glyph: rltk::to_cp437('¡'),
+            fg: RGB::named(rltk::MAGENTA),
+            bg: RGB::named(rltk::BLACK),
+        })
+        .build()
+}
+
 pub fn populate_room(ecs: &mut World, room: &Rect) {
     let mut monster_spawns: Vec<(i32, i32, i32)> = Vec::new();
+    let mut item_spawns: Vec<(i32, i32)> = Vec::new();
     let mut rng = ecs.write_resource::<RandomNumberGenerator>();
     let num_monsters = rng.roll_dice(1, MAX_MONSTERS + 2) - 3;
+    let num_items = rng.roll_dice(1, MAX_ITEMS + 2) - 3;
 
     for _ in 0..num_monsters {
         loop {
@@ -91,11 +110,26 @@ pub fn populate_room(ecs: &mut World, room: &Rect) {
         }
     }
 
+    for _ in 0..num_items {
+        loop {
+            let x = room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1));
+            let y = room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1));
+            if !item_spawns.contains(&(x, y)) {
+                item_spawns.push((x, y));
+                break;
+            }
+        }
+    }
+
     std::mem::drop(rng);
     for (x, y, n) in monster_spawns.iter() {
         match *n {
             1 => spawn_kobold(ecs, *x, *y),
             _ => spawn_goblin(ecs, *x, *y),
         };
+    }
+
+    for (x, y) in item_spawns.iter() {
+        spawn_health_pot(ecs, *x, *y);
     }
 }

@@ -6,6 +6,7 @@ mod components;
 mod damage_system;
 mod gamelog;
 mod gui;
+mod inventory_system;
 mod map;
 mod map_indexing_system;
 mod melee_combat_system;
@@ -18,6 +19,7 @@ mod visibility_system;
 use components::*;
 use damage_system::*;
 use gamelog::*;
+use inventory_system::*;
 use map::*;
 use map_indexing_system::*;
 use melee_combat_system::*;
@@ -33,6 +35,7 @@ pub enum RunState {
     AwaitingInput,
     PlayerTurn,
     MonsterTurn,
+    //    ShowInventory,
 }
 
 pub struct State {
@@ -46,12 +49,14 @@ impl State {
         let mut vis = VisibilitySystem {};
         let mut melee = MeleeCombatSystem {};
         let mut mapindex = MapIndexingSystem {};
+        let mut pickup = ItemCollectionSystem {};
 
         vis.run_now(&self.ecs);
         mons.run_now(&self.ecs);
         mapindex.run_now(&self.ecs);
         melee.run_now(&self.ecs);
         damage.run_now(&self.ecs);
+        pickup.run_now(&self.ecs);
 
         self.ecs.maintain();
     }
@@ -115,14 +120,18 @@ fn main() -> BError {
     //Registering a components
     gs.ecs.register::<BlocksTile>();
     gs.ecs.register::<CombatStats>();
+    gs.ecs.register::<InBackpack>();
+    gs.ecs.register::<Item>();
     gs.ecs.register::<Monster>();
     gs.ecs.register::<Name>();
+    gs.ecs.register::<Player>();
+    gs.ecs.register::<Position>();
+    gs.ecs.register::<Potion>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<SufferDamage>();
-    gs.ecs.register::<Position>();
-    gs.ecs.register::<Player>();
     gs.ecs.register::<Viewshed>();
     gs.ecs.register::<WantsToMelee>();
+    gs.ecs.register::<WantsToPickupItem>();
 
     //Create map and get player location
     let map = Map::new_map_rooms_and_corridors();
