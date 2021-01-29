@@ -35,7 +35,7 @@ pub enum RunState {
     AwaitingInput,
     PlayerTurn,
     MonsterTurn,
-    //    ShowInventory,
+    ShowInventory,
 }
 
 pub struct State {
@@ -66,6 +66,23 @@ impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
 
+        //Draw map & entities
+        draw_map(&self.ecs, ctx);
+        {
+            let positions = self.ecs.read_storage::<Position>();
+            let renderables = self.ecs.read_storage::<Renderable>();
+            let map = self.ecs.fetch::<Map>();
+            for (pos, render) in (&positions, &renderables).join() {
+                let idx = map.xy_idx(pos.x, pos.y);
+                if map.visible_tiles[idx] {
+                    ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
+                }
+            }
+        }
+
+        //GUI
+        gui::draw_ui(&self.ecs, ctx);
+
         let mut next_state = *self.ecs.fetch::<RunState>();
 
         //FSM
@@ -85,27 +102,16 @@ impl GameState for State {
                 self.run_systems();
                 next_state = RunState::AwaitingInput;
             }
-        }
-
-        //If a resource of a similar type is added, it is overwritten => overwriting old value
-        self.ecs.insert::<RunState>(next_state);
-
-        DamageSystem::delete_the_dead(&mut self.ecs);
-
-        //Draw map & entities
-        draw_map(&self.ecs, ctx);
-        let positions = self.ecs.read_storage::<Position>();
-        let renderables = self.ecs.read_storage::<Renderable>();
-        let map = self.ecs.fetch::<Map>();
-        for (pos, render) in (&positions, &renderables).join() {
-            let idx = map.xy_idx(pos.x, pos.y);
-            if map.visible_tiles[idx] {
-                ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
+            RunState::ShowInventory => {
+                if gui::show_inventory(self, ctx) == gui::ItemMenuResult::Cancel {
+                    next_state = RunState::AwaitingInput;
+                }
             }
         }
 
-        //GUI
-        gui::draw_ui(&self.ecs, ctx);
+        //Replace RunState with the new one
+        self.ecs.insert::<RunState>(next_state);
+        DamageSystem::delete_the_dead(&mut self.ecs);
     }
 }
 
