@@ -1,26 +1,30 @@
 use super::rect;
 use rltk::{Algorithm2D, BaseMap, Point, Rltk, RGB};
+use serde::{Deserialize, Serialize};
 use specs::prelude::*;
 
 pub const MAP_HEIGHT: i32 = 43;
 pub const MAP_WIDTH: i32 = 80;
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Deserialize, Serialize)]
 pub enum TileType {
     Wall,
     Floor,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 pub struct Map {
     pub tiles: Vec<TileType>,
     pub revealed_tiles: Vec<bool>,
     pub visible_tiles: Vec<bool>,
     pub blocked_tiles: Vec<bool>,
-    pub tile_content: Vec<Vec<Entity>>,
     pub rooms: Vec<rect::Rect>,
     pub width: i32,
     pub height: i32,
+
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
+    pub tile_content: Vec<Vec<Entity>>,
 }
 
 impl Map {

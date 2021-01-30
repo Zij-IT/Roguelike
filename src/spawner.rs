@@ -1,13 +1,15 @@
 use super::{
-    rect::Rect, BlocksTile, CombatStats, Item, Monster, Name, Player, Position, Potion, Renderable,
-    Viewshed,
+    rect::Rect, AreaOfEffect, BlocksTile, CombatStats, Consumable, InflictsDamage, Item, Monster,
+    Name, Player, Position, ProvidesHealing, Ranged, Renderable, SerializeMe, Viewshed,
 };
 use rltk::{RandomNumberGenerator, RGB};
 use specs::prelude::*;
+use specs::saveload::{MarkedBuilder, SimpleMarker};
 
 const MAX_MONSTERS: i32 = 4; //Per room
-const MAX_ITEMS: i32 = 2; //Per room
+const MAX_ITEMS: i32 = 10; //Per room
 
+//ENTITIES-----------
 pub fn spawn_player(ecs: &mut World, x: i32, y: i32) -> Entity {
     ecs.create_entity()
         .with(Position { x, y })
@@ -32,6 +34,7 @@ pub fn spawn_player(ecs: &mut World, x: i32, y: i32) -> Entity {
             defense: 2,
             power: 5,
         })
+        .marked::<SimpleMarker<SerializeMe>>()
         .build()
 }
 
@@ -74,14 +77,17 @@ pub fn spawn_monster(
             defense: 1,
             power: 4,
         })
+        .marked::<SimpleMarker<SerializeMe>>()
         .build()
 }
 
+//ITEMS---------------
 pub fn spawn_health_pot(ecs: &mut World, x: i32, y: i32) -> Entity {
     ecs.create_entity()
         .with(Position { x, y })
         .with(Item {})
-        .with(Potion { heal_amount: 8 })
+        .with(ProvidesHealing { heal_amount: 8 })
+        .with(Consumable {})
         .with(Name {
             name: "Health Potion".to_string(),
         })
@@ -91,12 +97,55 @@ pub fn spawn_health_pot(ecs: &mut World, x: i32, y: i32) -> Entity {
             bg: RGB::named(rltk::BLACK),
             render_order: 1,
         })
+        .marked::<SimpleMarker<SerializeMe>>()
         .build()
 }
 
+fn spawn_magic_missile_scroll(ecs: &mut World, x: i32, y: i32) -> Entity {
+    ecs.create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
+            glyph: rltk::to_cp437(')'),
+            fg: RGB::named(rltk::CYAN),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2,
+        })
+        .with(Name {
+            name: "Magic Missle Scroll".to_string(),
+        })
+        .with(Item {})
+        .with(Consumable {})
+        .with(Ranged { range: 6 })
+        .with(InflictsDamage { damage: 8 })
+        .marked::<SimpleMarker<SerializeMe>>()
+        .build()
+}
+
+fn spawn_fireball_scroll(ecs: &mut World, x: i32, y: i32) -> Entity {
+    ecs.create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
+            glyph: rltk::to_cp437(')'),
+            fg: RGB::named(rltk::ORANGE),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2,
+        })
+        .with(Name {
+            name: "Fireball Scroll".to_string(),
+        })
+        .with(Item {})
+        .with(Consumable {})
+        .with(Ranged { range: 6 })
+        .with(InflictsDamage { damage: 20 })
+        .with(AreaOfEffect { radius: 3 })
+        .marked::<SimpleMarker<SerializeMe>>()
+        .build()
+}
+
+//ROOM POPULATION-----
 pub fn populate_room(ecs: &mut World, room: &Rect) {
     let mut monster_spawns: Vec<(i32, i32, i32)> = Vec::new();
-    let mut item_spawns: Vec<(i32, i32)> = Vec::new();
+    let mut item_spawns: Vec<(i32, i32, i32)> = Vec::new();
     let mut rng = ecs.write_resource::<RandomNumberGenerator>();
     let num_monsters = rng.roll_dice(1, MAX_MONSTERS + 2) - 3;
     let num_items = rng.roll_dice(1, MAX_ITEMS + 2) - 3;
@@ -117,8 +166,9 @@ pub fn populate_room(ecs: &mut World, room: &Rect) {
         loop {
             let x = room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1));
             let y = room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1));
-            if !item_spawns.contains(&(x, y)) {
-                item_spawns.push((x, y));
+            let n = rng.roll_dice(1, 3);
+            if !item_spawns.contains(&(x, y, n)) {
+                item_spawns.push((x, y, n));
                 break;
             }
         }
@@ -132,7 +182,11 @@ pub fn populate_room(ecs: &mut World, room: &Rect) {
         };
     }
 
-    for (x, y) in item_spawns.iter() {
-        spawn_health_pot(ecs, *x, *y);
+    for (x, y, n) in item_spawns.iter() {
+        match *n {
+            1 => spawn_health_pot(ecs, *x, *y),
+            2 => spawn_fireball_scroll(ecs, *x, *y),
+            _ => spawn_magic_missile_scroll(ecs, *x, *y),
+        };
     }
 }

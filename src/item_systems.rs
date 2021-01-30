@@ -1,4 +1,8 @@
-use super::{gamelog::GameLog, InBackpack, Name, Position, WantsToPickupItem};
+use super::{
+    gamelog::GameLog, AreaOfEffect, CombatStats, Consumable, InBackpack, InflictsDamage, Map, Name,
+    Position, ProvidesHealing, SufferDamage, WantsToDropItem, WantsToPickupItem, WantsToUseItem,
+};
+use rltk::{Algorithm2D, Point};
 use specs::prelude::*;
 
 pub struct ItemCollectionSystem {}
@@ -36,5 +40,146 @@ impl<'a> System<'a> for ItemCollectionSystem {
             }
         }
         attempts.clear();
+    }
+}
+
+pub struct ItemDropSystem {}
+
+impl<'a> System<'a> for ItemDropSystem {
+    #[allow(clippy::type_complexity)]
+    type SystemData = (
+        Entities<'a>,
+        ReadExpect<'a, Entity>,
+        ReadStorage<'a, Name>,
+        WriteExpect<'a, GameLog>,
+        WriteStorage<'a, InBackpack>,
+        WriteStorage<'a, Position>,
+        WriteStorage<'a, WantsToDropItem>,
+    );
+
+    fn run(&mut self, data: Self::SystemData) {
+        let (entities, player_ent, names, mut logs, mut backpack, mut positions, mut wants_to_drop) =
+            data;
+        for (dropper, intent_to_drop) in (&entities, &wants_to_drop).join() {
+            let dropper_pos = positions.get(dropper).unwrap().clone();
+            positions
+                .insert(intent_to_drop.item, dropper_pos)
+                .expect("Unable to add position to dropped item");
+            backpack.remove(intent_to_drop.item);
+            if dropper == *player_ent {
+                logs.entries.push(format!(
+                    "You drop the {}",
+                    names.get(intent_to_drop.item).unwrap().name
+                ));
+            }
+        }
+        wants_to_drop.clear();
+    }
+}
+
+pub struct ItemUseSystem {}
+
+impl<'a> System<'a> for ItemUseSystem {
+    #[allow(clippy::type_complexity)]
+    type SystemData = (
+        Entities<'a>,
+        ReadExpect<'a, Entity>,
+        ReadExpect<'a, Map>,
+        ReadStorage<'a, AreaOfEffect>,
+        ReadStorage<'a, Consumable>,
+        ReadStorage<'a, InflictsDamage>,
+        ReadStorage<'a, Name>,
+        ReadStorage<'a, ProvidesHealing>,
+        WriteExpect<'a, GameLog>,
+        WriteStorage<'a, CombatStats>,
+        WriteStorage<'a, SufferDamage>,
+        WriteStorage<'a, WantsToUseItem>,
+    );
+
+    fn run(&mut self, data: Self::SystemData) {
+        let (
+            entities,
+            player_ent,
+            map,
+            aoe,
+            consumables,
+            damaging_items,
+            names,
+            healing_items,
+            mut logs,
+            mut all_stats,
+            mut suffering,
+            mut intents,
+        ) = data;
+
+        for (user, intent) in (&entities, &intents).join() {
+            let mut used_item = true;
+
+            //targeting
+            let mut targets: Vec<Entity> = Vec::new();
+            match intent.target {
+                None => targets.push(*player_ent),
+                Some(target) => match aoe.get(intent.item) {
+                    None => {
+                        let idx = map.xy_idx(target.x, target.y);
+                        for mob in map.tile_content[idx].iter() {
+                            targets.push(*mob);
+                        }
+                    }
+                    Some(area) => {
+                        let mut affected_tiles = rltk::field_of_view(target, area.radius, &*map);
+                        affected_tiles.retain(|t| (*map).in_bounds(Point::new(t.x, t.y)));
+                        for tile in affected_tiles.iter() {
+                            let idx = map.xy_idx(tile.x, tile.y);
+                            for mob in map.tile_content[idx].iter() {
+                                targets.push(*mob);
+                            }
+                        }
+                    }
+                },
+            }
+
+            //apply heals
+            if let Some(heal) = healing_items.get(intent.item) {
+                for target in targets.iter() {
+                    if let Some(stats) = all_stats.get_mut(*target) {
+                        stats.hp = i32::min(stats.max_hp, stats.hp + heal.heal_amount);
+                        if user == *player_ent {
+                            logs.entries.push(format!(
+                                "You use the {}, healing {} hp.",
+                                names.get(intent.item).unwrap().name,
+                                heal.heal_amount
+                            ));
+                        }
+                        used_item = true;
+                    }
+                }
+            }
+
+            //deal damage
+            if let Some(damage) = damaging_items.get(intent.item) {
+                for mob in targets.iter() {
+                    SufferDamage::new_damage(&mut suffering, *mob, damage.damage);
+                    if user == *player_ent && all_stats.get(*mob).is_some() {
+                        let mob_name = &names.get(*mob).unwrap().name;
+                        let item_name = &names.get(intent.item).unwrap().name;
+                        logs.entries.push(format!(
+                            "You use {} on {} inflicting {} damage.",
+                            item_name, mob_name, damage.damage
+                        ));
+                    }
+                    used_item = true;
+                }
+            }
+
+            //Consumable
+            if consumables.get(intent.item).is_some() && used_item {
+                entities
+                    .delete(intent.item)
+                    .expect("Deletion of consumable failed");
+            }
+        }
+
+        intents.clear();
     }
 }
