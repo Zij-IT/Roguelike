@@ -12,6 +12,7 @@ pub struct Renderable {
     pub glyph: rltk::FontCharType,
     pub fg: rltk::RGB,
     pub bg: rltk::RGB,
+    pub render_order: i32,
 }
 
 #[derive(Component)]

@@ -6,7 +6,7 @@ mod components;
 mod damage_system;
 mod gamelog;
 mod gui;
-mod inventory_system;
+mod item_systems;
 mod map;
 mod map_indexing_system;
 mod melee_combat_system;
@@ -19,7 +19,7 @@ mod visibility_system;
 use components::*;
 use damage_system::*;
 use gamelog::*;
-use inventory_system::*;
+use item_systems::*;
 use map::*;
 use map_indexing_system::*;
 use melee_combat_system::*;
@@ -72,7 +72,9 @@ impl GameState for State {
             let positions = self.ecs.read_storage::<Position>();
             let renderables = self.ecs.read_storage::<Renderable>();
             let map = self.ecs.fetch::<Map>();
-            for (pos, render) in (&positions, &renderables).join() {
+            let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
+            data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
+            for (pos, render) in data.iter() {
                 let idx = map.xy_idx(pos.x, pos.y);
                 if map.visible_tiles[idx] {
                     ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
@@ -103,8 +105,20 @@ impl GameState for State {
                 next_state = RunState::AwaitingInput;
             }
             RunState::ShowInventory => {
-                if gui::show_inventory(self, ctx) == gui::ItemMenuResult::Cancel {
-                    next_state = RunState::AwaitingInput;
+                let (item_res, selected_item) = gui::show_inventory(self, ctx);
+                match item_res {
+                    gui::ItemMenuResult::Selected => {
+                        let selected_item = selected_item.unwrap();
+                        let names = self.ecs.read_storage::<Name>();
+                        let mut gamelog = self.ecs.fetch_mut::<gamelog::GameLog>();
+                        gamelog.entries.push(format!(
+                            "You try to use {}, but it isn't written yet",
+                            names.get(selected_item).unwrap().name
+                        ));
+                        next_state = RunState::AwaitingInput;
+                    }
+                    gui::ItemMenuResult::Cancel => next_state = RunState::AwaitingInput,
+                    gui::ItemMenuResult::NoResponse => {}
                 }
             }
         }

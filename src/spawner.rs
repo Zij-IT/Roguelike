@@ -16,6 +16,7 @@ pub fn spawn_player(ecs: &mut World, x: i32, y: i32) -> Entity {
             glyph: rltk::to_cp437('@'),
             fg: RGB::named(rltk::YELLOW),
             bg: RGB::named(rltk::BLACK),
+            render_order: 0,
         })
         .with(Viewshed {
             visible_tiles: Vec::new(),
@@ -55,6 +56,7 @@ pub fn spawn_monster(
             glyph,
             fg: RGB::named(rltk::RED),
             bg: RGB::named(rltk::BLACK),
+            render_order: 1,
         })
         .with(Viewshed {
             visible_tiles: Vec::new(),
@@ -87,6 +89,7 @@ pub fn spawn_health_pot(ecs: &mut World, x: i32, y: i32) -> Entity {
             glyph: rltk::to_cp437('¡'),
             fg: RGB::named(rltk::MAGENTA),
             bg: RGB::named(rltk::BLACK),
+            render_order: 1,
         })
         .build()
 }
