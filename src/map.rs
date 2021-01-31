@@ -13,8 +13,9 @@ pub const TILE_BLOCKED: u8 = 2;
 
 #[derive(PartialEq, Copy, Clone, Deserialize, Serialize)]
 pub enum TileType {
-    Wall,
     Floor,
+    StairsDown,
+    Wall,
 }
 
 #[derive(Clone, Default, Deserialize, Serialize)]
@@ -24,6 +25,7 @@ pub struct Map {
     pub rooms: Vec<rect::Rect>,
     pub width: i32,
     pub height: i32,
+    pub depth: i32,
 
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
@@ -31,7 +33,7 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn new_map_rooms_and_corridors() -> Map {
+    pub fn new_map_rooms_and_corridors(new_depth: i32) -> Map {
         let mut map = Map {
             tiles: vec![TileType::Wall; (MAP_WIDTH * MAP_HEIGHT) as usize],
             tile_status: vec![0; (MAP_WIDTH * MAP_HEIGHT) as usize],
@@ -39,6 +41,7 @@ impl Map {
             rooms: vec![],
             width: MAP_WIDTH,
             height: MAP_HEIGHT,
+            depth: new_depth,
         };
 
         const MAX_ROOMS: i32 = 30;
@@ -71,6 +74,12 @@ impl Map {
                 map.rooms.push(new_room);
             }
         }
+
+        //Apply stairs to center of last room
+        let stairs_pos = map.rooms.last().unwrap().center();
+        let stairs_idx = map.xy_idx(stairs_pos.0, stairs_pos.1);
+        map.tiles[stairs_idx] = TileType::StairsDown;
+
         map
     }
 
@@ -157,7 +166,7 @@ impl BaseMap for Map {
     fn is_opaque(&self, idx: usize) -> bool {
         match self.tiles[idx] {
             TileType::Wall => true,
-            TileType::Floor => false,
+            TileType::StairsDown | TileType::Floor => false,
         }
     }
 
@@ -205,6 +214,7 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
             let (glyph, mut fg) = match tile {
                 TileType::Wall => ('#', RGB::from_f32(0.0, 1.0, 0.0)),
                 TileType::Floor => ('.', RGB::from_f32(0., 0.25, 0.)),
+                TileType::StairsDown => ('>', RGB::from_f32(0., 1.0, 1.0)),
             };
 
             if !map.is_tile_status_set(pos, TILE_VISIBLE) {

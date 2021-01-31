@@ -144,8 +144,10 @@ fn spawn_fireball_scroll(ecs: &mut World, x: i32, y: i32) -> Entity {
 
 //ROOM POPULATION-----
 pub fn populate_room(ecs: &mut World, room: &Rect) {
-    let mut monster_spawns: Vec<(i32, i32, i32)> = Vec::new();
-    let mut item_spawns: Vec<(i32, i32, i32)> = Vec::new();
+    let mut monster_spawns: Vec<(i32, i32)> = Vec::new();
+    let mut item_spawns: Vec<(i32, i32)> = Vec::new();
+    let mut monsters = Vec::new();
+    let mut items = Vec::new();
     let mut rng = ecs.write_resource::<RandomNumberGenerator>();
     let num_monsters = rng.roll_dice(1, MAX_MONSTERS + 2) - 3;
     let num_items = rng.roll_dice(1, MAX_ITEMS + 2) - 3;
@@ -155,8 +157,9 @@ pub fn populate_room(ecs: &mut World, room: &Rect) {
             let x = room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1));
             let y = room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1));
             let n = rng.roll_dice(1, 2);
-            if !monster_spawns.contains(&(x, y, n)) {
-                monster_spawns.push((x, y, n));
+            if !monster_spawns.contains(&(x, y)) {
+                monster_spawns.push((x, y));
+                monsters.push(n);
                 break;
             }
         }
@@ -167,23 +170,25 @@ pub fn populate_room(ecs: &mut World, room: &Rect) {
             let x = room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1));
             let y = room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1));
             let n = rng.roll_dice(1, 3);
-            if !item_spawns.contains(&(x, y, n)) {
-                item_spawns.push((x, y, n));
+            if !item_spawns.contains(&(x, y)) {
+                item_spawns.push((x, y));
+                items.push(n);
                 break;
             }
         }
     }
 
+    //Gotta please the borrow checker
     std::mem::drop(rng);
-    for (x, y, n) in monster_spawns.iter() {
-        match *n {
+    for (n, (x, y)) in monster_spawns.iter().enumerate() {
+        match monsters[n] {
             1 => spawn_kobold(ecs, *x, *y),
             _ => spawn_goblin(ecs, *x, *y),
         };
     }
 
-    for (x, y, n) in item_spawns.iter() {
-        match *n {
+    for (n, (x, y)) in item_spawns.iter().enumerate() {
+        match items[n] {
             1 => spawn_health_pot(ecs, *x, *y),
             2 => spawn_fireball_scroll(ecs, *x, *y),
             _ => spawn_magic_missile_scroll(ecs, *x, *y),

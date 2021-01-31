@@ -1,7 +1,7 @@
 use super::{
     components::{CombatStats, Item, Player, Position, Viewshed, WantsToMelee, WantsToPickupItem},
     map::Map,
-    GameLog, RunState, State, TILE_BLOCKED,
+    GameLog, RunState, State, TileType, TILE_BLOCKED,
 };
 use rltk::{Point, Rltk, VirtualKeyCode};
 use specs::prelude::*;
@@ -20,12 +20,31 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
             VirtualKeyCode::I => return RunState::ShowInventory,
             VirtualKeyCode::D => return RunState::ShowDropItem,
             VirtualKeyCode::Escape => return RunState::SaveGame,
+            VirtualKeyCode::Period => {
+                if try_next_level(&mut gs.ecs) {
+                    return RunState::NextLevel;
+                }
+            }
             _ => {
                 return RunState::AwaitingInput;
             }
         },
     }
     RunState::PlayerTurn
+}
+
+fn try_next_level(ecs: &mut World) -> bool {
+    let player_pos = ecs.fetch::<Point>();
+    let map = ecs.fetch::<Map>();
+    let player_idx = map.xy_idx(player_pos.x, player_pos.y);
+    if map.tiles[player_idx] == TileType::StairsDown {
+        true
+    } else {
+        let mut logs = ecs.fetch_mut::<GameLog>();
+        logs.entries
+            .push("There is no way down from here.".to_string());
+        false
+    }
 }
 
 fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {

@@ -43,6 +43,15 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
             RGB::named(rltk::RED),
             RGB::named(rltk::BLACK),
         );
+        //Map Deets
+        let depth = (*ecs.fetch::<super::Map>()).depth;
+        ctx.print_color(
+            2,
+            43,
+            RGB::named(rltk::YELLOW),
+            RGB::named(rltk::BLACK),
+            &format!("Depth: {}", depth),
+        );
     }
 }
 

@@ -42,6 +42,7 @@ pub enum RunState {
     ShowDropItem,
     ShowInventory,
     ShowTargeting(i32, Entity),
+    NextLevel,
 }
 
 pub struct State {
@@ -69,6 +70,71 @@ impl State {
         use_items.run_now(&self.ecs);
 
         self.ecs.maintain();
+    }
+
+    fn entities_to_remove_on_level_change(&mut self) -> Vec<Entity> {
+        let entities = self.ecs.entities();
+        let player_ent = self.ecs.fetch::<Entity>();
+        let backpack = self.ecs.read_storage::<InBackpack>();
+
+        let mut to_delete = entities.join().collect::<Vec<_>>();
+        to_delete.retain(|ent| {
+            *ent != *player_ent && {
+                if let Some(pack) = backpack.get(*ent) {
+                    pack.owner != *player_ent //Item is not in the players backpack
+                } else {
+                    true //Item is not in a backpack
+                }
+            }
+        });
+
+        to_delete
+    }
+
+    fn goto_next_level(&mut self) {
+        let to_delete = self.entities_to_remove_on_level_change();
+        for target in to_delete {
+            self.ecs
+                .delete_entity(target)
+                .expect("Unable to delete entity during level transition");
+        }
+        let world_map = {
+            let mut world_map = self.ecs.write_resource::<Map>();
+            let current_depth = world_map.depth;
+            *world_map = Map::new_map_rooms_and_corridors(current_depth + 1);
+            world_map.clone()
+        };
+
+        //Baddies
+        for room in world_map.rooms.iter().skip(1) {
+            spawner::populate_room(&mut self.ecs, room);
+        }
+
+        //Update Player pos, and Player comp resource
+        let (player_x, player_y) = world_map.rooms[0].center();
+        let mut player_pos = self.ecs.write_resource::<Point>();
+        *player_pos = Point::new(player_x, player_y);
+        let mut pos_comps = self.ecs.write_storage::<Position>();
+        let player_ent = self.ecs.fetch::<Entity>();
+        if let Some(pos_comp) = pos_comps.get_mut(*player_ent) {
+            pos_comp.x = player_x;
+            pos_comp.y = player_y;
+        }
+
+        //Dirty players viewshed
+        let mut viewsheds = self.ecs.write_storage::<Viewshed>();
+        if let Some(vs) = viewsheds.get_mut(*player_ent) {
+            vs.is_dirty = true;
+        }
+
+        //Notify player
+        let mut logs = self.ecs.fetch_mut::<gamelog::GameLog>();
+        logs.entries
+            .push("You descend to the next level.".to_string());
+        let mut all_stats = self.ecs.write_storage::<CombatStats>();
+        if let Some(player_stats) = all_stats.get_mut(*player_ent) {
+            player_stats.hp = i32::max(player_stats.hp, player_stats.max_hp / 2);
+        }
     }
 }
 
@@ -194,6 +260,10 @@ impl GameState for State {
                 saveload_system::save_game(&mut self.ecs);
                 next_state = RunState::MainMenu(gui::MainMenuSelection::LoadGame);
             }
+            RunState::NextLevel => {
+                self.goto_next_level();
+                next_state = RunState::PreRun;
+            }
         }
 
         //Replace RunState with the new one
@@ -236,7 +306,7 @@ fn main() -> BError {
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
     //Create map and get player location
-    let map = Map::new_map_rooms_and_corridors();
+    let map = Map::new_map_rooms_and_corridors(1);
     let (player_x, player_y) = map.rooms[0].center();
 
     //RNG!
