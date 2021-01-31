@@ -190,14 +190,14 @@ pub fn draw_range(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuResult
     (ItemMenuResult::NoResponse, None)
 }
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub enum MainMenuSelection {
     NewGame,
     LoadGame,
     Quit,
 }
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub enum MainMenuResult {
     NoSelection(MainMenuSelection),
     Selection(MainMenuSelection),

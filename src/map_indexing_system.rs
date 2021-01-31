@@ -1,4 +1,4 @@
-use super::{BlocksTile, Map, Position};
+use super::{BlocksTile, Map, Position, TILE_BLOCKED};
 use specs::prelude::*;
 
 pub struct MapIndexingSystem {}
@@ -19,7 +19,7 @@ impl<'a> System<'a> for MapIndexingSystem {
         for (position, entity) in (&position, &entities).join() {
             let idx = map.xy_idx(position.x, position.y);
             if blockers.get(entity).is_some() {
-                map.blocked_tiles[idx] = true;
+                map.set_tile_status(idx, TILE_BLOCKED);
             }
             map.tile_content[idx].push(entity);
         }

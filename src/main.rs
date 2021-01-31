@@ -31,7 +31,7 @@ use spawner::*;
 use visibility_system::*;
 
 //Enums
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub enum RunState {
     AwaitingInput,
     MainMenu(gui::MainMenuSelection),
@@ -86,7 +86,7 @@ impl GameState for State {
             data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
             for (pos, render) in data.iter() {
                 let idx = map.xy_idx(pos.x, pos.y);
-                if map.visible_tiles[idx] {
+                if map.is_tile_status_set(idx, TILE_VISIBLE) {
                     ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
                 }
             }

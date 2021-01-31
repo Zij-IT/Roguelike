@@ -1,4 +1,4 @@
-use super::{Map, Player, Position, Viewshed};
+use super::{Map, Player, Position, Viewshed, TILE_REVEALED, TILE_VISIBLE};
 use rltk::{field_of_view, Point};
 use specs::prelude::*;
 
@@ -26,13 +26,13 @@ impl<'a> System<'a> for VisibilitySystem {
                     .visible_tiles
                     .retain(|t| t.x >= 0 && t.x < map.width && t.y >= 0 && t.y < map.height);
                 if players.get(ent).is_some() {
-                    for t in map.visible_tiles.iter_mut() {
-                        *t = false
+                    for idx in 0..map.tile_status.len() {
+                        map.remove_tile_status(idx, TILE_VISIBLE);
                     }
                     for vis in viewshed.visible_tiles.iter() {
                         let idx = map.xy_idx(vis.x, vis.y);
-                        map.revealed_tiles[idx] = true;
-                        map.visible_tiles[idx] = true;
+                        map.set_tile_status(idx, TILE_REVEALED);
+                        map.set_tile_status(idx, TILE_VISIBLE);
                     }
                 }
             }

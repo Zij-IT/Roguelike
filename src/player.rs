@@ -1,7 +1,7 @@
 use super::{
     components::{CombatStats, Item, Player, Position, Viewshed, WantsToMelee, WantsToPickupItem},
     map::Map,
-    GameLog, RunState, State,
+    GameLog, RunState, State, TILE_BLOCKED,
 };
 use rltk::{Point, Rltk, VirtualKeyCode};
 use specs::prelude::*;
@@ -66,7 +66,7 @@ fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
         }
 
         //If not blocked, moves the player there
-        if !map.blocked_tiles[destination_idx] {
+        if !map.is_tile_status_set(destination_idx, TILE_BLOCKED) {
             pos.x = std::cmp::min(79, std::cmp::max(0, pos.x + delta_x));
             pos.y = std::cmp::min(49, std::cmp::max(0, pos.y + delta_y));
             let mut ppos = ecs.write_resource::<Point>();

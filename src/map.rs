@@ -6,6 +6,11 @@ use specs::prelude::*;
 pub const MAP_HEIGHT: i32 = 43;
 pub const MAP_WIDTH: i32 = 80;
 
+//Tile Statuses
+pub const TILE_REVEALED: u8 = 0;
+pub const TILE_VISIBLE: u8 = 1;
+pub const TILE_BLOCKED: u8 = 2;
+
 #[derive(PartialEq, Copy, Clone, Deserialize, Serialize)]
 pub enum TileType {
     Wall,
@@ -15,9 +20,7 @@ pub enum TileType {
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct Map {
     pub tiles: Vec<TileType>,
-    pub revealed_tiles: Vec<bool>,
-    pub visible_tiles: Vec<bool>,
-    pub blocked_tiles: Vec<bool>,
+    pub tile_status: Vec<u8>,
     pub rooms: Vec<rect::Rect>,
     pub width: i32,
     pub height: i32,
@@ -31,9 +34,7 @@ impl Map {
     pub fn new_map_rooms_and_corridors() -> Map {
         let mut map = Map {
             tiles: vec![TileType::Wall; (MAP_WIDTH * MAP_HEIGHT) as usize],
-            revealed_tiles: vec![false; (MAP_WIDTH * MAP_HEIGHT) as usize],
-            visible_tiles: vec![false; (MAP_WIDTH * MAP_HEIGHT) as usize],
-            blocked_tiles: vec![false; (MAP_WIDTH * MAP_HEIGHT) as usize],
+            tile_status: vec![0; (MAP_WIDTH * MAP_HEIGHT) as usize],
             tile_content: vec![Vec::new(); (MAP_WIDTH * MAP_HEIGHT) as usize],
             rooms: vec![],
             width: MAP_WIDTH,
@@ -78,8 +79,12 @@ impl Map {
     }
 
     pub fn populate_blocked(&mut self) {
-        for (i, tile) in self.tiles.iter_mut().enumerate() {
-            self.blocked_tiles[i] = *tile == TileType::Wall;
+        for idx in 0..self.tiles.len() {
+            if self.tiles[idx] == TileType::Wall {
+                self.set_tile_status(idx, TILE_BLOCKED);
+            } else {
+                self.remove_tile_status(idx, TILE_BLOCKED);
+            }
         }
     }
 
@@ -87,6 +92,19 @@ impl Map {
         for content in self.tile_content.iter_mut() {
             content.clear();
         }
+    }
+
+    //100 = blocked, 010 = visible, 001 = revealed
+    pub fn is_tile_status_set(&self, idx: usize, status: u8) -> bool {
+        (self.tile_status[idx] & (1 << status)) != 0
+    }
+
+    pub fn set_tile_status(&mut self, idx: usize, status: u8) {
+        self.tile_status[idx] |= 1 << (status);
+    }
+
+    pub fn remove_tile_status(&mut self, idx: usize, status: u8) {
+        self.tile_status[idx] &= !(1 << status);
     }
 
     fn apply_room_to_map(&mut self, room: &rect::Rect) {
@@ -121,7 +139,7 @@ impl Map {
             return false;
         }
         let idx = self.xy_idx(x, y);
-        !self.blocked_tiles[idx as usize]
+        !self.is_tile_status_set(idx, TILE_BLOCKED)
     }
 }
 
@@ -180,7 +198,7 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
     let map = ecs.fetch::<Map>();
 
     for (pos, tile) in map.tiles.iter().enumerate() {
-        if map.revealed_tiles[pos] {
+        if map.is_tile_status_set(pos, TILE_REVEALED) {
             let x = pos as i32 % map.width;
             let y = pos as i32 / map.width;
 
@@ -189,7 +207,7 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
                 TileType::Floor => ('.', RGB::from_f32(0., 0.25, 0.)),
             };
 
-            if !map.visible_tiles[pos] {
+            if !map.is_tile_status_set(pos, TILE_VISIBLE) {
                 fg = fg.to_greyscale();
             }
 
