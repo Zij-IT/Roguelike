@@ -179,17 +179,21 @@ impl GameState for State {
                 }
                 gui::MainMenuResult::Selection(option) => match option {
                     gui::MainMenuSelection::NewGame => next_state = RunState::PreRun,
-                    gui::MainMenuSelection::LoadGame => next_state = RunState::PreRun,
+                    gui::MainMenuSelection::LoadGame => {
+                        saveload_system::load_game(&mut self.ecs);
+                        next_state = RunState::AwaitingInput;
+                    }
                     gui::MainMenuSelection::Quit => std::process::exit(0),
                 },
             },
             RunState::SaveGame => {
                 saveload_system::save_game(&mut self.ecs);
-                next_state = RunState::MainMenu(gui::MainMenuSelection::Quit);
+                next_state = RunState::MainMenu(gui::MainMenuSelection::LoadGame);
             }
         }
 
         //Replace RunState with the new one
+        println!("New State: {:?}", next_state);
         self.ecs.insert::<RunState>(next_state);
         DamageSystem::delete_the_dead(&mut self.ecs);
     }
