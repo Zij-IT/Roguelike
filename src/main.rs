@@ -193,7 +193,6 @@ impl GameState for State {
         }
 
         //Replace RunState with the new one
-        println!("New State: {:?}", next_state);
         self.ecs.insert::<RunState>(next_state);
         DamageSystem::delete_the_dead(&mut self.ecs);
     }
