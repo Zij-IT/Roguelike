@@ -76,26 +76,30 @@ impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
 
+        let mut next_state = *self.ecs.fetch::<RunState>();
         //Draw map & entities
-        draw_map(&self.ecs, ctx);
-        {
-            let positions = self.ecs.read_storage::<Position>();
-            let renderables = self.ecs.read_storage::<Renderable>();
-            let map = self.ecs.fetch::<Map>();
-            let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
-            data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
-            for (pos, render) in data.iter() {
-                let idx = map.xy_idx(pos.x, pos.y);
-                if map.is_tile_status_set(idx, TILE_VISIBLE) {
-                    ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
+        match next_state {
+            RunState::MainMenu(_) => {}
+            _ => {
+                draw_map(&self.ecs, ctx);
+                {
+                    let positions = self.ecs.read_storage::<Position>();
+                    let renderables = self.ecs.read_storage::<Renderable>();
+                    let map = self.ecs.fetch::<Map>();
+                    let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
+                    data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
+                    for (pos, render) in data.iter() {
+                        let idx = map.xy_idx(pos.x, pos.y);
+                        if map.is_tile_status_set(idx, TILE_VISIBLE) {
+                            ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
+                        }
+                    }
                 }
+
+                //GUI
+                gui::draw_ui(&self.ecs, ctx);
             }
         }
-
-        //GUI
-        gui::draw_ui(&self.ecs, ctx);
-
-        let mut next_state = *self.ecs.fetch::<RunState>();
 
         //FSM
         match next_state {
