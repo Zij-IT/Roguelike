@@ -1,5 +1,7 @@
 use super::{
-    components::{CombatStats, Item, Player, Position, Viewshed, WantsToMelee, WantsToPickupItem},
+    components::{
+        CombatStats, Item, Monster, Player, Position, Viewshed, WantsToMelee, WantsToPickupItem,
+    },
     map::Map,
     GameLog, RunState, State, TileType, TILE_BLOCKED,
 };
@@ -12,39 +14,32 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
             return RunState::AwaitingInput;
         }
         Some(key) => match key {
+            //Movement keys
             VirtualKeyCode::H | VirtualKeyCode::Left => try_move_player(-1, 0, &mut gs.ecs),
             VirtualKeyCode::L | VirtualKeyCode::Right => try_move_player(1, 0, &mut gs.ecs),
             VirtualKeyCode::K | VirtualKeyCode::Up => try_move_player(0, -1, &mut gs.ecs),
             VirtualKeyCode::J | VirtualKeyCode::Down => try_move_player(0, 1, &mut gs.ecs),
+            //Item keys
             VirtualKeyCode::G => get_item(&mut gs.ecs),
             VirtualKeyCode::I => return RunState::ShowInventory,
             VirtualKeyCode::D => return RunState::ShowDropItem,
+            //Save key
             VirtualKeyCode::Escape => return RunState::SaveGame,
+            //Skip key
+            VirtualKeyCode::Space => return skip_turn(&mut gs.ecs),
+            //Descend Key
             VirtualKeyCode::Period => {
                 if try_next_level(&mut gs.ecs) {
                     return RunState::NextLevel;
                 }
             }
+            //Ignore others
             _ => {
                 return RunState::AwaitingInput;
             }
         },
     }
     RunState::PlayerTurn
-}
-
-fn try_next_level(ecs: &mut World) -> bool {
-    let player_pos = ecs.fetch::<Point>();
-    let map = ecs.fetch::<Map>();
-    let player_idx = map.xy_idx(player_pos.x, player_pos.y);
-    if map.tiles[player_idx] == TileType::StairsDown {
-        true
-    } else {
-        let mut logs = ecs.fetch_mut::<GameLog>();
-        logs.entries
-            .push("There is no way down from here.".to_string());
-        false
-    }
 }
 
 fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
@@ -126,4 +121,47 @@ fn get_item(ecs: &mut World) {
                 .expect("Could not insert the item into wants to pickup");
         }
     }
+}
+
+fn try_next_level(ecs: &mut World) -> bool {
+    let player_pos = ecs.fetch::<Point>();
+    let map = ecs.fetch::<Map>();
+    let player_idx = map.xy_idx(player_pos.x, player_pos.y);
+    if map.tiles[player_idx] == TileType::StairsDown {
+        true
+    } else {
+        let mut logs = ecs.fetch_mut::<GameLog>();
+        logs.entries
+            .push("There is no way down from here.".to_string());
+        false
+    }
+}
+
+fn skip_turn(ecs: &mut World) -> RunState {
+    let viewshed_comps = ecs.read_storage::<Viewshed>();
+    let player_ent = ecs.fetch::<Entity>();
+    let player_vs = viewshed_comps.get(*player_ent).unwrap();
+    let mobs = ecs.read_storage::<Monster>();
+    let map = ecs.fetch::<Map>();
+
+    //Checks if the point contains a mob given the map
+    let contains_mob = |tile: Point| {
+        let idx = map.xy_idx(tile.x, tile.y);
+        map.tile_content[idx]
+            .iter()
+            .any(|ent| mobs.get(*ent).is_some())
+    };
+
+    //If the players viewshed does not contain mobs they may heal a point by waiting
+    if !player_vs
+        .visible_tiles
+        .iter()
+        .any(|&tile| contains_mob(tile))
+    {
+        let mut all_stats = ecs.write_storage::<CombatStats>();
+        let player_stats = all_stats.get_mut(*player_ent).unwrap();
+        player_stats.hp = i32::min(player_stats.hp + 1, player_stats.max_hp);
+    }
+
+    RunState::PlayerTurn
 }

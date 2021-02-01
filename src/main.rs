@@ -13,6 +13,7 @@ mod map_indexing_system;
 mod melee_combat_system;
 mod monster_ai_system;
 mod player;
+mod random_table;
 mod rect;
 mod saveload_system;
 mod spawner;
@@ -27,6 +28,7 @@ use map_indexing_system::*;
 use melee_combat_system::*;
 use monster_ai_system::*;
 use player::*;
+use random_table::*;
 use spawner::*;
 use visibility_system::*;
 
@@ -107,7 +109,7 @@ impl State {
 
         //Baddies
         for room in world_map.rooms.iter().skip(1) {
-            spawner::populate_room(&mut self.ecs, room);
+            spawner::populate_room(&mut self.ecs, room, world_map.depth);
         }
 
         //Update Player pos, and Player comp resource
@@ -250,8 +252,13 @@ impl GameState for State {
                 gui::MainMenuResult::Selection(option) => match option {
                     gui::MainMenuSelection::NewGame => next_state = RunState::PreRun,
                     gui::MainMenuSelection::LoadGame => {
-                        saveload_system::load_game(&mut self.ecs);
-                        next_state = RunState::AwaitingInput;
+                        if saveload_system::does_save_exist() {
+                            saveload_system::load_game(&mut self.ecs);
+                            next_state = RunState::AwaitingInput;
+                            saveload_system::delete_save();
+                        } else {
+                            next_state = RunState::MainMenu(option);
+                        }
                     }
                     gui::MainMenuSelection::Quit => std::process::exit(0),
                 },
@@ -315,7 +322,7 @@ fn main() -> BError {
     //Build entities
     let player_ent = spawn_player(&mut gs.ecs, player_x, player_y);
     for room in map.rooms.iter().skip(1) {
-        populate_room(&mut gs.ecs, &room);
+        populate_room(&mut gs.ecs, &room, map.depth);
     }
 
     //Insert resources into world

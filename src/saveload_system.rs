@@ -26,7 +26,7 @@ macro_rules! deserialize_individually {
         $(
         DeserializeComponents::<NoError, _>::deserialize(
             &mut ( &mut $ecs.write_storage::<$type>(), ),
-            &mut $data.0, // entities
+            &$data.0, // entities
             &mut $data.1, // marker
             &mut $data.2, // allocater
             &mut $de,
@@ -157,4 +157,10 @@ pub fn load_game(ecs: &mut World) {
 
 pub fn does_save_exist() -> bool {
     Path::new("./savegame.json").exists()
+}
+
+pub fn delete_save() {
+    if does_save_exist() {
+        std::fs::remove_file("./savegame.json").expect("Unable to delete file");
+    }
 }

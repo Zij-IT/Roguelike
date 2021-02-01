@@ -1,13 +1,14 @@
 use super::{
     rect::Rect, AreaOfEffect, BlocksTile, CombatStats, Consumable, InflictsDamage, Item, Monster,
-    Name, Player, Position, ProvidesHealing, Ranged, Renderable, SerializeMe, Viewshed,
+    Name, Player, Position, ProvidesHealing, RandomTable, Ranged, Renderable, SerializeMe,
+    SpawnType, Viewshed,
 };
 use rltk::{RandomNumberGenerator, RGB};
 use specs::prelude::*;
 use specs::saveload::{MarkedBuilder, SimpleMarker};
+use std::collections::HashMap;
 
-const MAX_MONSTERS: i32 = 4; //Per room
-const MAX_ITEMS: i32 = 10; //Per room
+const MAX_SPAWNS: i32 = 9; //Per room
 
 //ENTITIES-----------
 pub fn spawn_player(ecs: &mut World, x: i32, y: i32) -> Entity {
@@ -143,55 +144,58 @@ fn spawn_fireball_scroll(ecs: &mut World, x: i32, y: i32) -> Entity {
 }
 
 //ROOM POPULATION-----
-pub fn populate_room(ecs: &mut World, room: &Rect) {
-    let mut monster_spawns: Vec<(i32, i32)> = Vec::new();
-    let mut item_spawns: Vec<(i32, i32)> = Vec::new();
-    let mut monsters = Vec::new();
-    let mut items = Vec::new();
+pub fn populate_room(ecs: &mut World, room: &Rect, map_depth: i32) {
+    let spawn_table = create_room_table(map_depth);
+    let mut spawn_points: HashMap<(i32, i32), Option<SpawnType>> = HashMap::new();
+
     let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-    let num_monsters = rng.roll_dice(1, MAX_MONSTERS + 2) - 3;
-    let num_items = rng.roll_dice(1, MAX_ITEMS + 2) - 3;
+    let num_spawns = rng.roll_dice(1, MAX_SPAWNS + 3) + (map_depth - 1) - 3;
 
-    for _ in 0..num_monsters {
-        loop {
+    for _ in 0..num_spawns {
+        let mut tries = 20;
+        while tries > 0 {
             let x = room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1));
             let y = room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1));
-            let n = rng.roll_dice(1, 2);
-            if !monster_spawns.contains(&(x, y)) {
-                monster_spawns.push((x, y));
-                monsters.push(n);
+            if spawn_points.get(&(x, y)).is_some() {
+                tries += 1;
+            } else {
+                spawn_points.insert((x, y), spawn_table.roll(&mut rng));
                 break;
             }
         }
     }
 
-    for _ in 0..num_items {
-        loop {
-            let x = room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1));
-            let y = room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1));
-            let n = rng.roll_dice(1, 3);
-            if !item_spawns.contains(&(x, y)) {
-                item_spawns.push((x, y));
-                items.push(n);
-                break;
-            }
-        }
-    }
-
-    //Gotta please the borrow checker
     std::mem::drop(rng);
-    for (n, (x, y)) in monster_spawns.iter().enumerate() {
-        match monsters[n] {
-            1 => spawn_kobold(ecs, *x, *y),
-            _ => spawn_goblin(ecs, *x, *y),
-        };
-    }
+    for spawn in spawn_points.iter() {
+        let x = spawn.0 .0;
+        let y = spawn.0 .1;
 
-    for (n, (x, y)) in item_spawns.iter().enumerate() {
-        match items[n] {
-            1 => spawn_health_pot(ecs, *x, *y),
-            2 => spawn_fireball_scroll(ecs, *x, *y),
-            _ => spawn_magic_missile_scroll(ecs, *x, *y),
+        match spawn.1 {
+            Some(SpawnType::Goblin) => {
+                spawn_goblin(ecs, x, y);
+            }
+            Some(SpawnType::Kobold) => {
+                spawn_kobold(ecs, x, y);
+            }
+            Some(SpawnType::HealthPotion) => {
+                spawn_health_pot(ecs, x, y);
+            }
+            Some(SpawnType::FireballScroll) => {
+                spawn_fireball_scroll(ecs, x, y);
+            }
+            Some(SpawnType::MagicMissileScroll) => {
+                spawn_magic_missile_scroll(ecs, x, y);
+            }
+            _ => {}
         };
     }
+}
+
+fn create_room_table(map_depth: i32) -> RandomTable {
+    RandomTable::new()
+        .insert(SpawnType::Goblin, 9 + map_depth)
+        .insert(SpawnType::Kobold, 3)
+        .insert(SpawnType::HealthPotion, 7)
+        .insert(SpawnType::FireballScroll, 2 + map_depth)
+        .insert(SpawnType::MagicMissileScroll, 4 + map_depth)
 }

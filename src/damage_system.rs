@@ -39,7 +39,7 @@ impl DamageSystem {
                                 log.entries.push(format!("{} is dead", &name.name));
                             }
                         }
-                        Some(_) => stats.hp = stats.max_hp as i32,
+                        Some(_) => stats.hp = 0,
                     }
                 }
             }
