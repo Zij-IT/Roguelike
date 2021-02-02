@@ -1,7 +1,7 @@
 use super::{
     gamelog::GameLog, AreaOfEffect, CombatStats, Consumable, Equipable, Equipped, InBackpack,
     InflictsDamage, Map, Name, Position, ProvidesHealing, SufferDamage, WantsToDropItem,
-    WantsToPickupItem, WantsToUseItem,
+    WantsToPickupItem, WantsToRemoveItem, WantsToUseItem,
 };
 use rltk::{Algorithm2D, Point};
 use specs::prelude::*;
@@ -12,15 +12,15 @@ impl<'a> System<'a> for ItemCollectionSystem {
     #[allow(clippy::type_complexity)]
     type SystemData = (
         ReadExpect<'a, Entity>,
-        WriteExpect<'a, GameLog>,
         ReadStorage<'a, Name>,
+        WriteExpect<'a, GameLog>,
         WriteStorage<'a, InBackpack>,
         WriteStorage<'a, Position>,
         WriteStorage<'a, WantsToPickupItem>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (player_ent, mut logs, names, mut backpack, mut positions, mut attempts) = data;
+        let (player_ent, names, mut logs, mut backpack, mut positions, mut attempts) = data;
 
         for pickup in attempts.join() {
             positions.remove(pickup.item);
@@ -59,9 +59,16 @@ impl<'a> System<'a> for ItemDropSystem {
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (entities, player_ent, names, mut logs, mut backpack, mut positions, mut wants_to_drop) =
-            data;
-        for (dropper, intent_to_drop) in (&entities, &wants_to_drop).join() {
+        let (
+            entities,
+            player_ent,
+            names,
+            mut logs,
+            mut backpack,
+            mut positions,
+            mut intents_to_drop,
+        ) = data;
+        for (dropper, intent_to_drop) in (&entities, &intents_to_drop).join() {
             let dropper_pos = positions.get(dropper).unwrap().clone();
             positions
                 .insert(intent_to_drop.item, dropper_pos)
@@ -74,7 +81,41 @@ impl<'a> System<'a> for ItemDropSystem {
                 ));
             }
         }
-        wants_to_drop.clear();
+        intents_to_drop.clear();
+    }
+}
+
+pub struct ItemRemoveSystem {}
+
+impl<'a> System<'a> for ItemRemoveSystem {
+    #[allow(clippy::type_compexity)]
+    type SystemData = (
+        Entities<'a>,
+        ReadExpect<'a, Entity>,
+        ReadStorage<'a, Name>,
+        WriteExpect<'a, GameLog>,
+        WriteStorage<'a, WantsToRemoveItem>,
+        WriteStorage<'a, Equipped>,
+        WriteStorage<'a, InBackpack>,
+    );
+
+    fn run(&mut self, data: Self::SystemData) {
+        let (entities, player_ent, names, mut logs, mut intents, mut equipped_items, mut backpacks) =
+            data;
+        for (entity, intent) in (&entities, &intents).join() {
+            equipped_items.remove(intent.item);
+            backpacks
+                .insert(intent.item, InBackpack { owner: entity })
+                .expect("Unable to insert item into backpack");
+            if entity == *player_ent {
+                logs.entries.push(format!(
+                    "You unequipt the {}",
+                    names.get(intent.item).unwrap().name
+                ))
+            }
+        }
+
+        intents.clear();
     }
 }
 

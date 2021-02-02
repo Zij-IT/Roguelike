@@ -47,13 +47,14 @@ pub enum RunState {
     AwaitingInput,
     MainMenu(gui::MainMenuSelection),
     MonsterTurn,
+    NextLevel,
     PlayerTurn,
     PreRun,
     SaveGame,
     ShowDropItem,
     ShowInventory,
+    ShowRemoveItem,
     ShowTargeting(i32, Entity),
-    NextLevel,
 }
 
 pub struct State {
@@ -70,6 +71,7 @@ impl State {
         let mut pickup_items = ItemCollectionSystem {};
         let mut drop_items = ItemDropSystem {};
         let mut use_items = ItemUseSystem {};
+        let mut rem_items = ItemRemoveSystem {};
 
         vis.run_now(&self.ecs);
         mons.run_now(&self.ecs);
@@ -79,6 +81,7 @@ impl State {
         pickup_items.run_now(&self.ecs);
         drop_items.run_now(&self.ecs);
         use_items.run_now(&self.ecs);
+        rem_items.run_now(&self.ecs);
 
         self.ecs.maintain();
     }
@@ -250,6 +253,26 @@ impl GameState for State {
                     gui::ItemMenuResult::NoResponse => {}
                 }
             }
+            RunState::ShowRemoveItem => {
+                let (item_res, selected_item) = gui::show_remove_inventory(self, ctx);
+                match item_res {
+                    gui::ItemMenuResult::Selected => {
+                        let selected_item = selected_item.unwrap();
+                        let mut intent = self.ecs.write_storage::<WantsToRemoveItem>();
+                        intent
+                            .insert(
+                                *self.ecs.fetch::<Entity>(),
+                                WantsToRemoveItem {
+                                    item: selected_item,
+                                },
+                            )
+                            .expect("Unable to insert intent to remove item");
+                        next_state = RunState::PlayerTurn;
+                    }
+                    gui::ItemMenuResult::Cancel => next_state = RunState::AwaitingInput,
+                    gui::ItemMenuResult::NoResponse => {}
+                }
+            }
             RunState::ShowTargeting(range, item) => {
                 let (item_res, target) = gui::draw_range(self, ctx, range);
                 match item_res {
@@ -313,11 +336,13 @@ fn main() -> BError {
         BlocksTile,
         CombatStats,
         Consumable,
+        DefenseBonus,
         Equipable,
         Equipped,
         InBackpack,
         InflictsDamage,
         Item,
+        MeleeDamageBonus,
         Monster,
         Name,
         Player,
@@ -332,7 +357,8 @@ fn main() -> BError {
         WantsToDropItem,
         WantsToMelee,
         WantsToPickupItem,
-        WantsToUseItem
+        WantsToRemoveItem,
+        WantsToUseItem,
     );
 
     //Inserts that must be implemented before creating entities

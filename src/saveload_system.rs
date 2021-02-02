@@ -58,11 +58,13 @@ pub fn save_game(ecs: &mut World) {
             BlocksTile,
             CombatStats,
             Consumable,
+            DefenseBonus,
             Equipable,
             Equipped,
             InBackpack,
             InflictsDamage,
             Item,
+            MeleeDamageBonus,
             Monster,
             Name,
             Player,
@@ -76,6 +78,7 @@ pub fn save_game(ecs: &mut World) {
             WantsToDropItem,
             WantsToMelee,
             WantsToPickupItem,
+            WantsToRemoveItem,
             WantsToUseItem,
         );
     }
@@ -130,6 +133,7 @@ pub fn load_game(ecs: &mut World) {
             WantsToDropItem,
             WantsToMelee,
             WantsToPickupItem,
+            WantsToRemoveItem,
             WantsToUseItem,
         );
     }

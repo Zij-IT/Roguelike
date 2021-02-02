@@ -102,24 +102,29 @@ pub struct ProvidesHealing {
     pub heal_amount: i32,
 }
 
-#[derive(Component, Debug, ConvertSaveload)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct InBackpack {
     pub owner: Entity,
 }
 
-#[derive(Component, Debug, ConvertSaveload)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct WantsToPickupItem {
     pub collected_by: Entity,
     pub item: Entity,
 }
 
-#[derive(Component, Debug, ConvertSaveload)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct WantsToUseItem {
     pub item: Entity,
     pub target: Option<rltk::Point>,
 }
 
-#[derive(Component, Debug, ConvertSaveload)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
+pub struct WantsToRemoveItem {
+    pub item: Entity,
+}
+
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct WantsToDropItem {
     pub item: Entity,
 }
@@ -145,6 +150,16 @@ pub struct Equipable {
 pub struct Equipped {
     pub owner: Entity,
     pub slot: EquipmentSlot,
+}
+
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct MeleeDamageBonus {
+    pub bonus: i32,
+}
+
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct DefenseBonus {
+    pub bonus: i32,
 }
 
 // Serialization helper code. We need to implement ConvertSaveload for each type that contains an

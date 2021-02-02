@@ -1,7 +1,7 @@
 use super::{
-    rect::Rect, AreaOfEffect, BlocksTile, CombatStats, Consumable, Equipable, EquipmentSlot,
-    InflictsDamage, Item, Monster, Name, Player, Position, ProvidesHealing, RandomTable, Ranged,
-    Renderable, SerializeMe, SpawnType, Viewshed,
+    rect::Rect, AreaOfEffect, BlocksTile, CombatStats, Consumable, DefenseBonus, Equipable,
+    EquipmentSlot, InflictsDamage, Item, MeleeDamageBonus, Monster, Name, Player, Position,
+    ProvidesHealing, RandomTable, Ranged, Renderable, SerializeMe, SpawnType, Viewshed,
 };
 use rltk::{RandomNumberGenerator, RGB};
 use specs::prelude::*;
@@ -160,6 +160,7 @@ fn spawn_simple_dagger(ecs: &mut World, x: i32, y: i32) -> Entity {
         .with(Equipable {
             slot: EquipmentSlot::PrimaryHand,
         })
+        .with(MeleeDamageBonus { bonus: 2 })
         .marked::<SimpleMarker<SerializeMe>>()
         .build()
 }
@@ -180,6 +181,7 @@ fn spawn_simple_shield(ecs: &mut World, x: i32, y: i32) -> Entity {
         .with(Equipable {
             slot: EquipmentSlot::OffHand,
         })
+        .with(DefenseBonus { bonus: 2 })
         .marked::<SimpleMarker<SerializeMe>>()
         .build()
 }
