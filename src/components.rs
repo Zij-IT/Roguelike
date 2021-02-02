@@ -124,8 +124,30 @@ pub struct WantsToDropItem {
     pub item: Entity,
 }
 
+#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
+pub enum EquipmentSlot {
+    Head,
+    Neck,
+    Torso,
+    Body,
+    PrimaryHand,
+    OffHand,
+    Feet,
+    Finger,
+}
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct Equipable {
+    pub slot: EquipmentSlot,
+}
+
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct Equipped {
+    pub owner: Entity,
+    pub slot: EquipmentSlot,
+}
+
 // Serialization helper code. We need to implement ConvertSaveload for each type that contains an
-// Entity.
 
 pub struct SerializeMe;
 

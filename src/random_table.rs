@@ -7,6 +7,8 @@ pub enum SpawnType {
     HealthPotion,
     FireballScroll,
     MagicMissileScroll,
+    SimpleDagger,
+    SimpleShield,
 }
 
 pub struct RandomEntry {

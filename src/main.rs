@@ -2,6 +2,15 @@ use rltk::prelude::*;
 use specs::prelude::*;
 use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
 
+//Macros
+macro_rules! register_all {
+    ($world:expr, $($component:ty),* $(,)*) => {
+        {
+            $($world.register::<$component>();)*
+        }
+    };
+}
+
 //All mods
 mod components;
 mod damage_system;
@@ -78,16 +87,26 @@ impl State {
         let entities = self.ecs.entities();
         let player_ent = self.ecs.fetch::<Entity>();
         let backpack = self.ecs.read_storage::<InBackpack>();
+        let equipped_items = self.ecs.read_storage::<Equipped>();
 
         let mut to_delete = entities.join().collect::<Vec<_>>();
         to_delete.retain(|ent| {
-            *ent != *player_ent && {
+            let is_player = *ent == *player_ent;
+            let is_in_player_bag = {
                 if let Some(pack) = backpack.get(*ent) {
-                    pack.owner != *player_ent //Item is not in the players backpack
+                    pack.owner != *player_ent
                 } else {
-                    true //Item is not in a backpack
+                    false
                 }
-            }
+            };
+            let is_equipped_by_player = {
+                if let Some(eq) = equipped_items.get(*ent) {
+                    eq.owner == *player_ent
+                } else {
+                    false
+                }
+            };
+            !is_player && !is_in_player_bag && !is_equipped_by_player
         });
 
         to_delete
@@ -287,45 +306,50 @@ fn main() -> BError {
     //Construct world
     let mut gs = State { ecs: World::new() };
 
-    //Registering a components
-    gs.ecs.register::<AreaOfEffect>();
-    gs.ecs.register::<BlocksTile>();
-    gs.ecs.register::<CombatStats>();
-    gs.ecs.register::<Consumable>();
-    gs.ecs.register::<InBackpack>();
-    gs.ecs.register::<InflictsDamage>();
-    gs.ecs.register::<Item>();
-    gs.ecs.register::<Monster>();
-    gs.ecs.register::<Name>();
-    gs.ecs.register::<Player>();
-    gs.ecs.register::<Position>();
-    gs.ecs.register::<ProvidesHealing>();
-    gs.ecs.register::<Ranged>();
-    gs.ecs.register::<Renderable>();
-    gs.ecs.register::<SimpleMarker<SerializeMe>>();
-    gs.ecs.register::<SerializationHelper>();
-    gs.ecs.register::<SufferDamage>();
-    gs.ecs.register::<Viewshed>();
-    gs.ecs.register::<WantsToDropItem>();
-    gs.ecs.register::<WantsToMelee>();
-    gs.ecs.register::<WantsToPickupItem>();
-    gs.ecs.register::<WantsToUseItem>();
+    //Register the components
+    register_all!(
+        gs.ecs,
+        AreaOfEffect,
+        BlocksTile,
+        CombatStats,
+        Consumable,
+        Equipable,
+        Equipped,
+        InBackpack,
+        InflictsDamage,
+        Item,
+        Monster,
+        Name,
+        Player,
+        Position,
+        ProvidesHealing,
+        Ranged,
+        Renderable,
+        SerializationHelper,
+        SimpleMarker<SerializeMe>,
+        SufferDamage,
+        Viewshed,
+        WantsToDropItem,
+        WantsToMelee,
+        WantsToPickupItem,
+        WantsToUseItem
+    );
+
+    //Inserts that must be implemented before creating entities
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
+    gs.ecs.insert(rltk::RandomNumberGenerator::new());
 
     //Create map and get player location
     let map = Map::new_map_rooms_and_corridors(1);
-    let (player_x, player_y) = map.rooms[0].center();
 
-    //RNG!
-    gs.ecs.insert(rltk::RandomNumberGenerator::new());
-
-    //Build entities
-    let player_ent = spawn_player(&mut gs.ecs, player_x, player_y);
+    //Populate rooms in the map
     for room in map.rooms.iter().skip(1) {
         populate_room(&mut gs.ecs, &room, map.depth);
     }
+    let (player_x, player_y) = map.rooms[0].center();
+    let player_ent = spawn_player(&mut gs.ecs, player_x, player_y);
 
-    //Insert resources into world
+    //Final resources to insert into world
     gs.ecs.insert(map);
     gs.ecs.insert(player_ent);
     gs.ecs.insert(Point::new(player_x, player_y));

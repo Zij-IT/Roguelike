@@ -1,6 +1,7 @@
 use super::{
-    gamelog::GameLog, AreaOfEffect, CombatStats, Consumable, InBackpack, InflictsDamage, Map, Name,
-    Position, ProvidesHealing, SufferDamage, WantsToDropItem, WantsToPickupItem, WantsToUseItem,
+    gamelog::GameLog, AreaOfEffect, CombatStats, Consumable, Equipable, Equipped, InBackpack,
+    InflictsDamage, Map, Name, Position, ProvidesHealing, SufferDamage, WantsToDropItem,
+    WantsToPickupItem, WantsToUseItem,
 };
 use rltk::{Algorithm2D, Point};
 use specs::prelude::*;
@@ -90,7 +91,10 @@ impl<'a> System<'a> for ItemUseSystem {
         ReadStorage<'a, InflictsDamage>,
         ReadStorage<'a, Name>,
         ReadStorage<'a, ProvidesHealing>,
+        ReadStorage<'a, Equipable>,
         WriteExpect<'a, GameLog>,
+        WriteStorage<'a, Equipped>,
+        WriteStorage<'a, InBackpack>,
         WriteStorage<'a, CombatStats>,
         WriteStorage<'a, SufferDamage>,
         WriteStorage<'a, WantsToUseItem>,
@@ -106,7 +110,10 @@ impl<'a> System<'a> for ItemUseSystem {
             damaging_items,
             names,
             healing_items,
+            equipables,
             mut logs,
+            mut equipped_items,
+            mut backpack,
             mut all_stats,
             mut suffering,
             mut intents,
@@ -169,6 +176,45 @@ impl<'a> System<'a> for ItemUseSystem {
                         ));
                     }
                     used_item = true;
+                }
+            }
+
+            //Equippables
+            if let Some(equipable) = equipables.get(intent.item) {
+                let mut to_unequip = Vec::new();
+                for (item, already_equipped, name) in (&entities, &equipped_items, &names).join() {
+                    if already_equipped.owner == targets[0]
+                        && equipable.slot == already_equipped.slot
+                    {
+                        to_unequip.push(item);
+                        if targets[0] == *player_ent {
+                            logs.entries.push(format!("You unequip {}.", name.name));
+                        }
+                    }
+                }
+
+                for item in to_unequip.iter() {
+                    equipped_items.remove(*item);
+                    backpack
+                        .insert(*item, InBackpack { owner: targets[0] })
+                        .expect("Unable to put unequipped item into backpack");
+                }
+
+                equipped_items
+                    .insert(
+                        intent.item,
+                        Equipped {
+                            owner: targets[0],
+                            slot: equipable.slot,
+                        },
+                    )
+                    .expect("Unable to equip desired item");
+                backpack.remove(intent.item);
+                if targets[0] == *player_ent {
+                    logs.entries.push(format!(
+                        "You equip {}.",
+                        names.get(intent.item).unwrap().name
+                    ));
                 }
             }
 

@@ -1,7 +1,7 @@
 use super::{
-    rect::Rect, AreaOfEffect, BlocksTile, CombatStats, Consumable, InflictsDamage, Item, Monster,
-    Name, Player, Position, ProvidesHealing, RandomTable, Ranged, Renderable, SerializeMe,
-    SpawnType, Viewshed,
+    rect::Rect, AreaOfEffect, BlocksTile, CombatStats, Consumable, Equipable, EquipmentSlot,
+    InflictsDamage, Item, Monster, Name, Player, Position, ProvidesHealing, RandomTable, Ranged,
+    Renderable, SerializeMe, SpawnType, Viewshed,
 };
 use rltk::{RandomNumberGenerator, RGB};
 use specs::prelude::*;
@@ -143,6 +143,47 @@ fn spawn_fireball_scroll(ecs: &mut World, x: i32, y: i32) -> Entity {
         .build()
 }
 
+//19 -> Hannah
+fn spawn_simple_dagger(ecs: &mut World, x: i32, y: i32) -> Entity {
+    ecs.create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
+            glyph: rltk::to_cp437('/'),
+            fg: RGB::named(rltk::CYAN),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2,
+        })
+        .with(Name {
+            name: "Dagger".to_string(),
+        })
+        .with(Item {})
+        .with(Equipable {
+            slot: EquipmentSlot::PrimaryHand,
+        })
+        .marked::<SimpleMarker<SerializeMe>>()
+        .build()
+}
+
+fn spawn_simple_shield(ecs: &mut World, x: i32, y: i32) -> Entity {
+    ecs.create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
+            glyph: rltk::to_cp437('0'),
+            fg: RGB::named(rltk::CYAN),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2,
+        })
+        .with(Name {
+            name: "Shield".to_string(),
+        })
+        .with(Item {})
+        .with(Equipable {
+            slot: EquipmentSlot::OffHand,
+        })
+        .marked::<SimpleMarker<SerializeMe>>()
+        .build()
+}
+
 //ROOM POPULATION-----
 pub fn populate_room(ecs: &mut World, room: &Rect, map_depth: i32) {
     let spawn_table = create_room_table(map_depth);
@@ -186,6 +227,12 @@ pub fn populate_room(ecs: &mut World, room: &Rect, map_depth: i32) {
             Some(SpawnType::MagicMissileScroll) => {
                 spawn_magic_missile_scroll(ecs, x, y);
             }
+            Some(SpawnType::SimpleDagger) => {
+                spawn_simple_dagger(ecs, x, y);
+            }
+            Some(SpawnType::SimpleShield) => {
+                spawn_simple_shield(ecs, x, y);
+            }
             _ => {}
         };
     }
@@ -198,4 +245,6 @@ fn create_room_table(map_depth: i32) -> RandomTable {
         .insert(SpawnType::HealthPotion, 7)
         .insert(SpawnType::FireballScroll, 2 + map_depth)
         .insert(SpawnType::MagicMissileScroll, 4 + map_depth)
+        .insert(SpawnType::SimpleDagger, 3)
+        .insert(SpawnType::SimpleShield, 3)
 }

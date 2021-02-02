@@ -8,7 +8,7 @@ use std::fs;
 use std::path::Path;
 
 macro_rules! serialize_individually {
-    ($ecs:expr, $ser:expr, $data:expr, $( $type:ty),*) => {
+    ($ecs:expr, $ser:expr, $data:expr, $( $type:ty),* $(,)?) => {
         $(
         SerializeComponents::<NoError, SimpleMarker<SerializeMe>>::serialize(
             &( $ecs.read_storage::<$type>(), ),
@@ -22,7 +22,7 @@ macro_rules! serialize_individually {
 }
 
 macro_rules! deserialize_individually {
-    ($ecs:expr, $de:expr, $data:expr, $( $type:ty),*) => {
+    ($ecs:expr, $de:expr, $data:expr, $( $type:ty),* $(,)?) => {
         $(
         DeserializeComponents::<NoError, _>::deserialize(
             &mut ( &mut $ecs.write_storage::<$type>(), ),
@@ -54,27 +54,29 @@ pub fn save_game(ecs: &mut World) {
             ecs,
             serializer,
             data,
-            Position,
-            Renderable,
-            Player,
-            Viewshed,
-            Monster,
-            Name,
+            AreaOfEffect,
             BlocksTile,
             CombatStats,
-            SufferDamage,
-            WantsToMelee,
-            Item,
             Consumable,
-            Ranged,
-            InflictsDamage,
-            AreaOfEffect,
-            ProvidesHealing,
+            Equipable,
+            Equipped,
             InBackpack,
+            InflictsDamage,
+            Item,
+            Monster,
+            Name,
+            Player,
+            Position,
+            ProvidesHealing,
+            Ranged,
+            Renderable,
+            SerializationHelper,
+            SufferDamage,
+            Viewshed,
+            WantsToDropItem,
+            WantsToMelee,
             WantsToPickupItem,
             WantsToUseItem,
-            WantsToDropItem,
-            SerializationHelper
         );
     }
 
@@ -106,27 +108,29 @@ pub fn load_game(ecs: &mut World) {
             ecs,
             de,
             d,
-            Position,
-            Renderable,
-            Player,
-            Viewshed,
-            Monster,
-            Name,
+            AreaOfEffect,
             BlocksTile,
             CombatStats,
-            SufferDamage,
-            WantsToMelee,
-            Item,
             Consumable,
-            Ranged,
-            InflictsDamage,
-            AreaOfEffect,
-            ProvidesHealing,
+            Equipable,
+            Equipped,
             InBackpack,
+            InflictsDamage,
+            Item,
+            Monster,
+            Name,
+            Player,
+            Position,
+            ProvidesHealing,
+            Ranged,
+            Renderable,
+            SerializationHelper,
+            SufferDamage,
+            Viewshed,
+            WantsToDropItem,
+            WantsToMelee,
             WantsToPickupItem,
             WantsToUseItem,
-            WantsToDropItem,
-            SerializationHelper
         );
     }
 
