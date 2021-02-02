@@ -37,8 +37,10 @@ impl RandomTable {
     }
 
     pub fn insert(mut self, s_type: SpawnType, weight: i32) -> RandomTable {
-        self.total_weight += weight;
-        self.entries.push(RandomEntry::new(s_type, weight));
+        if weight > 0 {
+            self.total_weight += weight;
+            self.entries.push(RandomEntry::new(s_type, weight));
+        }
         self
     }
 

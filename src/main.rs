@@ -45,6 +45,7 @@ use visibility_system::*;
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum RunState {
     AwaitingInput,
+    GameOver,
     MainMenu(gui::MainMenuSelection),
     MonsterTurn,
     NextLevel,
@@ -97,7 +98,7 @@ impl State {
             let is_player = *ent == *player_ent;
             let is_in_player_bag = {
                 if let Some(pack) = backpack.get(*ent) {
-                    pack.owner != *player_ent
+                    pack.owner == *player_ent
                 } else {
                     false
                 }
@@ -122,6 +123,7 @@ impl State {
                 .delete_entity(target)
                 .expect("Unable to delete entity during level transition");
         }
+
         let world_map = {
             let mut world_map = self.ecs.write_resource::<Map>();
             let current_depth = world_map.depth;
@@ -158,6 +160,44 @@ impl State {
         let mut all_stats = self.ecs.write_storage::<CombatStats>();
         if let Some(player_stats) = all_stats.get_mut(*player_ent) {
             player_stats.hp = i32::max(player_stats.hp, player_stats.max_hp / 2);
+        }
+    }
+
+    fn game_over_cleanup(&mut self) {
+        let to_delete = self.ecs.entities().join().collect::<Vec<_>>();
+        for ent in to_delete.iter() {
+            self.ecs.delete_entity(*ent).expect("Deletion failed");
+        }
+        let world_map = {
+            let mut world_map = self.ecs.write_resource::<Map>();
+            *world_map = Map::new_map_rooms_and_corridors(1);
+            world_map.clone()
+        };
+
+        //Baddies
+        for room in world_map.rooms.iter().skip(1) {
+            spawner::populate_room(&mut self.ecs, room, world_map.depth);
+        }
+
+        //Restart World
+        let (player_x, player_y) = world_map.rooms[0].center();
+        let new_player_ent = spawner::spawn_player(&mut self.ecs, player_x, player_y);
+
+        //Update player resources
+        self.ecs.insert(new_player_ent);
+        self.ecs.insert(Point::new(player_x, player_y));
+
+        //Update player movement comp
+        let mut position_components = self.ecs.write_storage::<Position>();
+        if let Some(player_pos_comp) = position_components.get_mut(new_player_ent) {
+            player_pos_comp.x = player_x;
+            player_pos_comp.y = player_y;
+        }
+
+        //Dirty players viewshed
+        let mut viewsheds = self.ecs.write_storage::<Viewshed>();
+        if let Some(vs) = viewsheds.get_mut(new_player_ent) {
+            vs.is_dirty = true;
         }
     }
 }
@@ -305,6 +345,16 @@ impl GameState for State {
                     gui::MainMenuSelection::Quit => std::process::exit(0),
                 },
             },
+            RunState::GameOver => {
+                let result = gui::show_game_over(ctx);
+                match result {
+                    gui::GameOverResult::NoSelection => {}
+                    gui::GameOverResult::QuitToMenu => {
+                        self.game_over_cleanup();
+                        next_state = RunState::MainMenu(gui::MainMenuSelection::NewGame);
+                    }
+                }
+            }
             RunState::SaveGame => {
                 saveload_system::save_game(&mut self.ecs);
                 next_state = RunState::MainMenu(gui::MainMenuSelection::LoadGame);

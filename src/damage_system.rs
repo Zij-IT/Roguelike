@@ -1,4 +1,4 @@
-use super::{CombatStats, GameLog, Name, Player, SufferDamage};
+use super::{CombatStats, GameLog, Name, Player, RunState, SufferDamage};
 use specs::prelude::*;
 
 pub struct DamageSystem {}
@@ -39,7 +39,10 @@ impl DamageSystem {
                                 log.entries.push(format!("{} is dead", &name.name));
                             }
                         }
-                        Some(_) => stats.hp = 0,
+                        Some(_) => {
+                            let mut run_state = ecs.write_resource::<RunState>();
+                            *run_state = RunState::GameOver;
+                        }
                     }
                 }
             }
