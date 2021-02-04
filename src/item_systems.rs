@@ -6,6 +6,8 @@ use super::{
 use rltk::{Algorithm2D, Point};
 use specs::prelude::*;
 
+const INVENTORY_LIMIT = 9;
+
 pub struct ItemCollectionSystem {}
 
 impl<'a> System<'a> for ItemCollectionSystem {
@@ -22,7 +24,23 @@ impl<'a> System<'a> for ItemCollectionSystem {
     fn run(&mut self, data: Self::SystemData) {
         let (player_ent, names, mut logs, mut backpack, mut positions, mut attempts) = data;
 
+        let player_inventory_size = (&backpack)
+            .join()
+            .filter(|&x| x.owner == *player_ent)
+            .collect::<Vec<_>>()
+            .len();
+
         for pickup in attempts.join() {
+            if player_inventory_size >= INVENTORY_LIMIT {
+                logs.entries.push(format!(
+                    "You are unable to pick up the {}.",
+                    names.get(pickup.item).unwrap().name
+                ));
+                logs.entries
+                    .push(format!("You are carrying too many items!",));
+                attempts.clear();
+                return;
+            }
             positions.remove(pickup.item);
             backpack
                 .insert(
@@ -88,7 +106,7 @@ impl<'a> System<'a> for ItemDropSystem {
 pub struct ItemRemoveSystem {}
 
 impl<'a> System<'a> for ItemRemoveSystem {
-    #[allow(clippy::type_compexity)]
+    #[allow(clippy::type_complexity)]
     type SystemData = (
         Entities<'a>,
         ReadExpect<'a, Entity>,

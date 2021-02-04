@@ -21,9 +21,11 @@ mod map;
 mod map_indexing_system;
 mod melee_combat_system;
 mod monster_ai_system;
+mod particle_system;
 mod player;
 mod random_table;
 mod rect;
+mod rex_assets;
 mod saveload_system;
 mod spawner;
 mod visibility_system;
@@ -36,6 +38,7 @@ use map::*;
 use map_indexing_system::*;
 use melee_combat_system::*;
 use monster_ai_system::*;
+use particle_system::*;
 use player::*;
 use random_table::*;
 use spawner::*;
@@ -64,15 +67,16 @@ pub struct State {
 
 impl State {
     fn run_systems(&mut self) {
-        let mut mons = MonsterAI {};
-        let mut damage = DamageSystem {};
         let mut vis = VisibilitySystem {};
-        let mut melee = MeleeCombatSystem {};
+        let mut mons = MonsterAI {};
         let mut mapindex = MapIndexingSystem {};
+        let mut melee = MeleeCombatSystem {};
+        let mut damage = DamageSystem {};
         let mut pickup_items = ItemCollectionSystem {};
-        let mut drop_items = ItemDropSystem {};
         let mut use_items = ItemUseSystem {};
+        let mut drop_items = ItemDropSystem {};
         let mut rem_items = ItemRemoveSystem {};
+        let mut particles = ParticleSpawnSystem {};
 
         vis.run_now(&self.ecs);
         mons.run_now(&self.ecs);
@@ -80,9 +84,10 @@ impl State {
         melee.run_now(&self.ecs);
         damage.run_now(&self.ecs);
         pickup_items.run_now(&self.ecs);
-        drop_items.run_now(&self.ecs);
         use_items.run_now(&self.ecs);
+        drop_items.run_now(&self.ecs);
         rem_items.run_now(&self.ecs);
+        particles.run_now(&self.ecs);
 
         self.ecs.maintain();
     }
@@ -174,6 +179,11 @@ impl State {
             world_map.clone()
         };
 
+        let mut logs = self.ecs.write_resource::<GameLog>();
+        logs.entries.clear();
+        logs.entries.push("Welcome to my Roguelike!".to_string());
+        std::mem::drop(logs);
+
         //Baddies
         for room in world_map.rooms.iter().skip(1) {
             spawner::populate_room(&mut self.ecs, room, world_map.depth);
@@ -205,6 +215,7 @@ impl State {
 impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
+        particle_system::cull_dead_particles(&mut self.ecs, ctx);
 
         let mut next_state = *self.ecs.fetch::<RunState>();
         //Draw map & entities
@@ -371,19 +382,12 @@ impl GameState for State {
     }
 }
 
-rltk::embedded_resource!(GAME_DEFAULT, "../resources/cp437_16x16.png");
-
 fn main() -> BError {
-    rltk::link_resource!(GAME_DEFAULT, "resources/cp437_16x16.png");
-    let context = {
-        let mut context = RltkBuilder::simple80x50()
-            .with_title("Bashing Bytes")
-            //.with_font("cp437_16x16.png", 16, 16)
-            .build()?;
-        //context.set_active_font(1, true); //Eventually after decoupling map from screen size
-        //after decoupling map from screen size
-        context
-    };
+    let context = RltkBuilder::simple(80, 60)
+        .unwrap()
+        .with_title("Bashing Bytes")
+        .with_fullscreen(true)
+        .build()?;
 
     //Construct world
     let mut gs = State { ecs: World::new() };
@@ -404,6 +408,7 @@ fn main() -> BError {
         MeleeDamageBonus,
         Monster,
         Name,
+        ParticleLifetime,
         Player,
         Position,
         ProvidesHealing,
@@ -420,29 +425,33 @@ fn main() -> BError {
         WantsToUseItem,
     );
 
-    //Inserts that must be implemented before creating entities
+    //Insert all non-entity related resources
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
     gs.ecs.insert(rltk::RandomNumberGenerator::new());
-
-    //Create map and get player location
-    let map = Map::new_map_rooms_and_corridors(1);
-
-    //Populate rooms in the map
-    for room in map.rooms.iter().skip(1) {
-        populate_room(&mut gs.ecs, &room, map.depth);
-    }
-    let (player_x, player_y) = map.rooms[0].center();
-    let player_ent = spawn_player(&mut gs.ecs, player_x, player_y);
-
-    //Final resources to insert into world
-    gs.ecs.insert(map);
-    gs.ecs.insert(player_ent);
-    gs.ecs.insert(Point::new(player_x, player_y));
+    gs.ecs.insert(rex_assets::RexAssets::new());
     gs.ecs
         .insert(RunState::MainMenu(gui::MainMenuSelection::NewGame));
     gs.ecs.insert(GameLog {
         entries: vec!["Welcome to my roguelike".to_string()],
     });
+    gs.ecs.insert(particle_system::ParticleBuilder::new());
+
+    //Create map and get player location
+    let map = Map::new_map_rooms_and_corridors(1);
+
+    //Populate rooms in the map with goodies (and baddies)
+    for room in map.rooms.iter().skip(1) {
+        populate_room(&mut gs.ecs, &room, map.depth);
+    }
+
+    //Create player and get location
+    let (player_x, player_y) = map.rooms[0].center();
+    let player_ent = spawn_player(&mut gs.ecs, player_x, player_y);
+
+    //Insert entity related resources to insert into world
+    gs.ecs.insert(map);
+    gs.ecs.insert(player_ent);
+    gs.ecs.insert(Point::new(player_x, player_y));
 
     //Start game
     main_loop(context, gs)

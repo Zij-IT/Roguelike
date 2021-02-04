@@ -1,4 +1,6 @@
-use super::{CombatStats, Equipped, GameLog, InBackpack, Name, Player, RunState, State, Viewshed};
+use super::{
+    rex_assets, CombatStats, Equipped, GameLog, InBackpack, Name, Player, RunState, State, Viewshed,
+};
 use rltk::{Point, Rltk, VirtualKeyCode, RGB};
 use specs::prelude::*;
 
@@ -303,20 +305,18 @@ pub enum MainMenuResult {
 }
 
 pub fn draw_main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
-    ctx.print_color_centered(
-        15,
-        RGB::named(rltk::YELLOW),
-        RGB::named(rltk::BLACK),
-        "Bashing Bytes",
-    );
+    let assets = gs.ecs.fetch::<rex_assets::RexAssets>();
+    ctx.render_xp_sprite(&assets.title_screen, 0, 0);
 
     if let RunState::MainMenu(current_selection) = *(gs.ecs.fetch::<RunState>()) {
-        let selected = RGB::named(rltk::MAGENTA);
+        let selected = RGB::named(rltk::YELLOW);
         let not_selected = RGB::named(rltk::WHITE);
-        let background = RGB::named(rltk::BLACK);
+        let background = (51, 51, 51);
+
+        let base_y = 45;
 
         ctx.print_color_centered(
-            24,
+            base_y,
             if current_selection == MainMenuSelection::NewGame {
                 selected
             } else {
@@ -327,7 +327,7 @@ pub fn draw_main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
         );
 
         ctx.print_color_centered(
-            25,
+            base_y + 2,
             if current_selection == MainMenuSelection::LoadGame {
                 selected
             } else {
@@ -338,7 +338,7 @@ pub fn draw_main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
         );
 
         ctx.print_color_centered(
-            26,
+            base_y + 4,
             if current_selection == MainMenuSelection::Quit {
                 selected
             } else {
@@ -380,6 +380,7 @@ pub enum GameOverResult {
 }
 
 pub fn show_game_over(ctx: &mut Rltk) -> GameOverResult {
+    ctx.cls();
     ctx.print_color_centered(
         15,
         RGB::named(rltk::YELLOW),

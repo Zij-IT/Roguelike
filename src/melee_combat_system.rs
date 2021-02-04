@@ -1,6 +1,6 @@
 use super::{
-    CombatStats, DefenseBonus, Equipped, GameLog, MeleeDamageBonus, Name, SufferDamage,
-    WantsToMelee,
+    CombatStats, DefenseBonus, Equipped, GameLog, MeleeDamageBonus, Name, ParticleBuilder,
+    Position, SufferDamage, WantsToMelee,
 };
 use specs::prelude::*;
 
@@ -11,26 +11,30 @@ impl<'a> System<'a> for MeleeCombatSystem {
     type SystemData = (
         Entities<'a>,
         ReadStorage<'a, CombatStats>,
-        ReadStorage<'a, Name>,
+        ReadStorage<'a, DefenseBonus>,
         ReadStorage<'a, Equipped>,
         ReadStorage<'a, MeleeDamageBonus>,
-        ReadStorage<'a, DefenseBonus>,
+        ReadStorage<'a, Name>,
+        ReadStorage<'a, Position>,
         WriteExpect<'a, GameLog>,
-        WriteStorage<'a, WantsToMelee>,
+        WriteExpect<'a, ParticleBuilder>,
         WriteStorage<'a, SufferDamage>,
+        WriteStorage<'a, WantsToMelee>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
         let (
             entities,
             all_stats,
-            names,
+            defense_bonuses,
             equipped_items,
             damage_bonuses,
-            defense_bonuses,
+            names,
+            positions,
             mut gamelog,
-            mut attacks,
+            mut particle_builder,
             mut damages,
+            mut attacks,
         ) = data;
 
         for (attacker, attack, name, stats) in (&entities, &attacks, &names, &all_stats).join() {
@@ -44,7 +48,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
                     }
                 }
 
-                //Get targets stats
+                //If the target is alive
                 let target_stats = all_stats.get(attack.target).unwrap();
                 if target_stats.hp > 0 {
                     let mut defense_bonus_sum = 0;
@@ -55,9 +59,13 @@ impl<'a> System<'a> for MeleeCombatSystem {
                             defense_bonus_sum += defense_bonus.bonus;
                         }
                     }
+
+                    //Calculate damage
                     let bonus_diff = attack_bonus_sum - defense_bonus_sum;
                     let damage = i32::max(0, stats.power - target_stats.defense + bonus_diff);
                     let target_name = &(names.get(attack.target).unwrap().name);
+
+                    //Inform player
                     let message;
                     if damage == 0 {
                         message = format!("{} is unable to hurt {}.", &name.name, target_name);
@@ -67,6 +75,18 @@ impl<'a> System<'a> for MeleeCombatSystem {
                         SufferDamage::new_damage(&mut damages, attack.target, damage);
                     }
                     gamelog.entries.push(message.to_string());
+
+                    //Create damage effect
+                    if let Some(pos) = positions.get(attack.target) {
+                        particle_builder.create_particle(
+                            pos.x,
+                            pos.y,
+                            rltk::RGB::named(rltk::ORANGE),
+                            rltk::RGB::named(rltk::BLACK),
+                            19, //‼
+                            200.0,
+                        );
+                    }
                 }
             }
         }
