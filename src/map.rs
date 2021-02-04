@@ -212,16 +212,16 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
             let y = pos as i32 / map.width;
 
             let (glyph, mut fg) = match tile {
-                TileType::Wall => ('#', RGB::from_f32(0.0, 1.0, 0.0)),
-                TileType::Floor => ('.', RGB::from_f32(0., 0.25, 0.)),
-                TileType::StairsDown => ('>', RGB::from_f32(0., 1.0, 1.0)),
+                TileType::Wall => (35, RGB::from_f32(0.0, 1.0, 0.0)),
+                TileType::Floor => (46, RGB::from_f32(0., 0.25, 0.)),
+                TileType::StairsDown => (174, RGB::from_f32(0., 1.0, 1.0)),
             };
 
             if !map.is_tile_status_set(pos, TILE_VISIBLE) {
                 fg = fg.to_greyscale();
             }
 
-            ctx.set(x, y, fg, RGB::from_f32(0., 0., 0.), rltk::to_cp437(glyph));
+            ctx.set(x, y, fg, RGB::from_f32(0., 0., 0.), glyph);
         }
     }
 }

@@ -371,10 +371,19 @@ impl GameState for State {
     }
 }
 
+rltk::embedded_resource!(GAME_DEFAULT, "../resources/cp437_16x16.png");
+
 fn main() -> BError {
-    let context = RltkBuilder::simple80x50()
-        .with_title("Bashing Bytes")
-        .build()?;
+    rltk::link_resource!(GAME_DEFAULT, "resources/cp437_16x16.png");
+    let context = {
+        let mut context = RltkBuilder::simple80x50()
+            .with_title("Bashing Bytes")
+            //.with_font("cp437_16x16.png", 16, 16)
+            .build()?;
+        //context.set_active_font(1, true); //Eventually after decoupling map from screen size
+        //after decoupling map from screen size
+        context
+    };
 
     //Construct world
     let mut gs = State { ecs: World::new() };

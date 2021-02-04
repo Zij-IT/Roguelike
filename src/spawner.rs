@@ -143,7 +143,6 @@ fn spawn_fireball_scroll(ecs: &mut World, x: i32, y: i32) -> Entity {
         .build()
 }
 
-//19 -> Hannah
 fn spawn_simple_dagger(ecs: &mut World, x: i32, y: i32) -> Entity {
     ecs.create_entity()
         .with(Position { x, y })
@@ -169,7 +168,7 @@ fn spawn_simple_shield(ecs: &mut World, x: i32, y: i32) -> Entity {
     ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
-            glyph: rltk::to_cp437('0'),
+            glyph: 248,
             fg: RGB::named(rltk::CYAN),
             bg: RGB::named(rltk::BLACK),
             render_order: 2,
