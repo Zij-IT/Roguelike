@@ -1,4 +1,4 @@
-use super::{ParticleLifetime, Position, Renderable, Rltk};
+use crate::{ParticleLifetime, Position, Renderable, Rltk};
 use rltk::RGB;
 use specs::prelude::*;
 

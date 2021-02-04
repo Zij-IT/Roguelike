@@ -1,4 +1,4 @@
-use super::components::*;
+use crate::{components::*, Map};
 use specs::error::NoError;
 use specs::prelude::*;
 use specs::saveload::{
@@ -37,7 +37,7 @@ macro_rules! deserialize_individually {
 }
 
 pub fn save_game(ecs: &mut World) {
-    let mapcopy = ecs.get_mut::<super::map::Map>().unwrap().clone();
+    let mapcopy = ecs.get_mut::<Map>().unwrap().clone();
     let save_helper = ecs
         .create_entity()
         .with(SerializationHelper { map: mapcopy })
@@ -145,7 +145,7 @@ pub fn load_game(ecs: &mut World) {
         let player = ecs.read_storage::<Player>();
         let position = ecs.read_storage::<Position>();
         for (e, h) in (&entities, &helper).join() {
-            let mut world_map = ecs.write_resource::<super::map::Map>();
+            let mut world_map = ecs.write_resource::<Map>();
             *world_map = h.map.clone();
             world_map.tile_content =
                 vec![Vec::new(); (world_map.width * world_map.height) as usize];

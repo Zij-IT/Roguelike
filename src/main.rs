@@ -13,36 +13,23 @@ macro_rules! register_all {
 
 //All mods
 mod components;
-mod damage_system;
 mod gamelog;
 mod gui;
-mod item_systems;
 mod map;
-mod map_indexing_system;
-mod melee_combat_system;
-mod monster_ai_system;
-mod particle_system;
 mod player;
 mod random_table;
 mod rect;
 mod rex_assets;
-mod saveload_system;
 mod spawner;
-mod visibility_system;
+mod systems;
 
 use components::*;
-use damage_system::*;
 use gamelog::*;
-use item_systems::*;
 use map::*;
-use map_indexing_system::*;
-use melee_combat_system::*;
-use monster_ai_system::*;
-use particle_system::*;
 use player::*;
 use random_table::*;
 use spawner::*;
-use visibility_system::*;
+use systems::*;
 
 //Enums
 #[derive(PartialEq, Copy, Clone, Debug)]

@@ -1,4 +1,4 @@
-use super::{
+use crate::{
     gamelog::GameLog, AreaOfEffect, CombatStats, Consumable, Equipable, Equipped, InBackpack,
     InflictsDamage, Map, Name, Position, ProvidesHealing, SufferDamage, WantsToDropItem,
     WantsToPickupItem, WantsToRemoveItem, WantsToUseItem,
@@ -6,7 +6,7 @@ use super::{
 use rltk::{Algorithm2D, Point};
 use specs::prelude::*;
 
-const INVENTORY_LIMIT = 9;
+const INVENTORY_LIMIT: usize = 9;
 
 pub struct ItemCollectionSystem {}
 

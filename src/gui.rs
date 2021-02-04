@@ -156,7 +156,6 @@ pub fn show_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
 
 pub fn show_remove_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option<Entity>) {
     let player_ent = gs.ecs.fetch::<Entity>();
-    let current_state = gs.ecs.fetch::<RunState>();
     let names = gs.ecs.read_storage::<Name>();
     let equipped_items = gs.ecs.read_storage::<Equipped>();
     let entities = gs.ecs.entities();
@@ -181,11 +180,7 @@ pub fn show_remove_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult,
         y - 2,
         RGB::named(rltk::YELLOW),
         RGB::named(rltk::BLACK),
-        if *current_state != RunState::ShowDropItem {
-            "Inventory"
-        } else {
-            "Drop What?"
-        },
+        "Deequip What?",
     );
     ctx.print_color(
         18,
@@ -195,7 +190,7 @@ pub fn show_remove_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult,
         "ESCAPE to cancel",
     );
 
-    //Print out everything in inventory
+    //Print out everything currently equipped
     for (j, (_, name, entity)) in (&equipped_items, &names, &entities)
         .join()
         .filter(|item| item.0.owner == *player_ent)

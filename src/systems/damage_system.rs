@@ -1,4 +1,4 @@
-use super::{CombatStats, GameLog, Name, Player, RunState, SufferDamage};
+use crate::{CombatStats, GameLog, Name, Player, RunState, SufferDamage};
 use specs::prelude::*;
 
 pub struct DamageSystem {}

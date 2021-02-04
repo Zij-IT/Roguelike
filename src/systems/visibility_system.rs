@@ -1,4 +1,4 @@
-use super::{Map, Player, Position, Viewshed, TILE_REVEALED, TILE_VISIBLE};
+use crate::{Map, Player, Position, Viewshed, TILE_REVEALED, TILE_VISIBLE};
 use rltk::{field_of_view, Point};
 use specs::prelude::*;
 

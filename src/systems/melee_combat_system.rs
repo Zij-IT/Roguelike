@@ -1,6 +1,7 @@
-use super::{
-    CombatStats, DefenseBonus, Equipped, GameLog, MeleeDamageBonus, Name, ParticleBuilder,
-    Position, SufferDamage, WantsToMelee,
+use super::ParticleBuilder;
+use crate::{
+    CombatStats, DefenseBonus, Equipped, GameLog, MeleeDamageBonus, Name, Position, SufferDamage,
+    WantsToMelee,
 };
 use specs::prelude::*;
 
