@@ -320,7 +320,10 @@ impl GameState for State {
                     next_state = RunState::MainMenu(prev_option)
                 }
                 gui::MainMenuResult::Selection(option) => match option {
-                    gui::MainMenuSelection::NewGame => next_state = RunState::PreRun,
+                    gui::MainMenuSelection::NewGame => {
+                        self.game_over_cleanup();
+                        next_state = RunState::PreRun;
+                    }
                     gui::MainMenuSelection::LoadGame => {
                         if saveload_system::does_save_exist() {
                             saveload_system::load_game(&mut self.ecs);
