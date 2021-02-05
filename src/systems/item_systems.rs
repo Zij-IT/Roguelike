@@ -27,8 +27,7 @@ impl<'a> System<'a> for ItemCollectionSystem {
         let player_inventory_size = (&backpack)
             .join()
             .filter(|&x| x.owner == *player_ent)
-            .collect::<Vec<_>>()
-            .len();
+            .count();
 
         for pickup in attempts.join() {
             if player_inventory_size >= INVENTORY_LIMIT {
@@ -37,7 +36,7 @@ impl<'a> System<'a> for ItemCollectionSystem {
                     names.get(pickup.item).unwrap().name
                 ));
                 logs.entries
-                    .push(format!("You are carrying too many items!",));
+                    .push("You are carrying too many items!".to_string());
                 attempts.clear();
                 return;
             }
