@@ -2,6 +2,9 @@ use rltk::prelude::*;
 use specs::prelude::*;
 use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
 
+//Constants
+const SHOW_MAPGEN: bool = true;
+
 //Macros
 macro_rules! register_all {
     ($ecs:expr, $($component:ty),* $(,)*) => {
@@ -43,6 +46,7 @@ pub enum RunState {
     AwaitingInput,
     GameOver,
     MainMenu(gui::MainMenuSelection),
+    MapGeneration,
     MonsterTurn,
     NextLevel,
     PlayerTurn,
@@ -54,8 +58,13 @@ pub enum RunState {
     ShowTargeting(i32, Entity),
 }
 
+//Main gamestate
 pub struct State {
     pub ecs: World,
+    mapgen_next_state: Option<RunState>,
+    mapgen_history: Vec<Map>,
+    mapgen_index: usize,
+    mapgen_timer: f32,
 }
 
 impl State {
@@ -159,12 +168,18 @@ impl State {
     }
 
     fn generate_world_map(&mut self, new_depth: i32) {
+        //Visualizing mapgen
+        self.mapgen_index = 0;
+        self.mapgen_timer = 0.0;
+        self.mapgen_history.clear();
+
         let mut builder = map_builder::random_builder(new_depth);
         builder.build_map();
         {
             let mut world = self.ecs.write_resource::<Map>();
             *world = builder.get_map();
         }
+        self.mapgen_history = builder.get_snapshot_history();
 
         //Pretty self explanatory
         builder.spawn_entities(&mut self.ecs);
@@ -199,7 +214,7 @@ impl GameState for State {
         match next_state {
             RunState::MainMenu(_) => {}
             _ => {
-                draw_map(&self.ecs, ctx);
+                draw_map(&self.ecs.fetch::<Map>(), ctx);
                 {
                     let positions = self.ecs.read_storage::<Position>();
                     let renderables = self.ecs.read_storage::<Renderable>();
@@ -323,6 +338,9 @@ impl GameState for State {
                     gui::MainMenuSelection::NewGame => {
                         self.game_over_cleanup();
                         next_state = RunState::PreRun;
+                        if SHOW_MAPGEN {
+                            next_state = RunState::MapGeneration;
+                        }
                     }
                     gui::MainMenuSelection::LoadGame => {
                         if saveload_system::does_save_exist() {
@@ -354,6 +372,22 @@ impl GameState for State {
                 self.goto_next_level();
                 next_state = RunState::PreRun;
             }
+            RunState::MapGeneration => {
+                if !SHOW_MAPGEN {
+                    next_state = self.mapgen_next_state.unwrap();
+                }
+                ctx.cls();
+                draw_map(&self.mapgen_history[self.mapgen_index], ctx);
+
+                self.mapgen_timer += ctx.frame_time_ms;
+                if self.mapgen_timer > 300.0 {
+                    self.mapgen_timer = 0.0;
+                    self.mapgen_index += 1;
+                    if self.mapgen_index >= self.mapgen_history.len() {
+                        next_state = self.mapgen_next_state.unwrap();
+                    }
+                }
+            }
         }
 
         //Replace RunState with the new one
@@ -370,7 +404,13 @@ fn main() -> BError {
         .build()?;
 
     //Construct world
-    let mut gs = State { ecs: World::new() };
+    let mut gs = State {
+        ecs: World::new(),
+        mapgen_next_state: Some(RunState::MainMenu(gui::MainMenuSelection::NewGame)),
+        mapgen_history: Vec::new(),
+        mapgen_index: 0,
+        mapgen_timer: 0.0,
+    };
 
     //Register the components
     //gs.ecs must be first, otherwise irrelevant
@@ -416,7 +456,7 @@ fn main() -> BError {
         rltk::RandomNumberGenerator::new(),
         Map::new(1),
         Point::new(0, 0),
-        RunState::MainMenu(gui::MainMenuSelection::NewGame),
+        RunState::MapGeneration {},
         particle_system::ParticleBuilder::new(),
         rex_assets::RexAssets::new(),
         GameLog {

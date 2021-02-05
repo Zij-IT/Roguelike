@@ -135,9 +135,7 @@ impl BaseMap for Map {
 }
 
 ///Prints out the map to the rltk::Console
-pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
-    let map = ecs.fetch::<Map>();
-
+pub fn draw_map(map: &Map, ctx: &mut Rltk) {
     for (pos, tile) in map.tiles.iter().enumerate() {
         if map.is_tile_status_set(pos, TILE_REVEALED) {
             let x = pos as i32 % map.width;

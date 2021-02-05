@@ -10,6 +10,7 @@ pub struct SimpleMapBuilder {
     map: Map,
     starting_position: Position,
     rooms: Vec<rect::Rect>,
+    history: Vec<Map>,
 }
 
 impl SimpleMapBuilder {
@@ -18,6 +19,7 @@ impl SimpleMapBuilder {
             map: Map::new(new_depth),
             starting_position: Position { x: 0, y: 0 },
             rooms: Vec::new(),
+            history: Vec::new(),
         }
     }
 
@@ -36,7 +38,7 @@ impl SimpleMapBuilder {
 
             if !self.rooms.iter().any(|room| room.intersect(&new_room)) {
                 apply_room_to_map(&mut self.map, &new_room);
-
+                self.take_snapshot();
                 if !self.rooms.is_empty() {
                     let (new_x, new_y) = new_room.center();
                     let (prev_x, prev_y) = self.rooms[self.rooms.len() - 1].center();
@@ -48,7 +50,7 @@ impl SimpleMapBuilder {
                         apply_horizontal_tunnel(&mut self.map, prev_x, new_x, prev_y);
                     }
                 }
-
+                self.take_snapshot();
                 self.rooms.push(new_room);
             }
         }
@@ -83,5 +85,19 @@ impl MapBuilder for SimpleMapBuilder {
 
     fn get_starting_position(&self) -> Position {
         self.starting_position.clone()
+    }
+
+    fn get_snapshot_history(&self) -> Vec<Map> {
+        self.history.clone()
+    }
+
+    fn take_snapshot(&mut self) {
+        if crate::SHOW_MAPGEN {
+            let mut snapshot = self.get_map();
+            for tile in 0..snapshot.tile_status.len() {
+                snapshot.set_tile_status(tile, TILE_REVEALED);
+            }
+            self.history.push(snapshot);
+        }
     }
 }
