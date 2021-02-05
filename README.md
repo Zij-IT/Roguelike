@@ -1,4 +1,4 @@
-## Roguelike
+## Bashing Bytes
 
 So this is mainly to just work on my ability to have a long term project, and to just have fun with Rust. The main goal of this project is to make an accessilbe roguelike that anyone could play. I would like the game to support just using the mouse, or just the keyboard. For now the asthetics aren't the primary goal, although I would like it to look nice. This does mean that before I make the game something different (whatever that means), that I would like to make sure its fun to just explore the menus. 
 
