@@ -1,8 +1,9 @@
 use super::{
-    rect::Rect, AreaOfEffect, BlocksTile, CombatStats, Consumable, DefenseBonus, Equipable,
-    EquipmentSlot, InflictsDamage, Item, MeleeDamageBonus, Monster, Name, Player, Position,
-    ProvidesHealing, RandomTable, Ranged, Renderable, SerializeMe, SpawnType, Viewshed,
+    AreaOfEffect, BlocksTile, CombatStats, Consumable, DefenseBonus, Equipable, EquipmentSlot,
+    InflictsDamage, Item, MeleeDamageBonus, Monster, Name, Player, Position, ProvidesHealing,
+    RandomTable, Ranged, Renderable, SerializeMe, SpawnType, Viewshed,
 };
+use crate::rect::Rect;
 use rltk::{RandomNumberGenerator, RGB};
 use specs::prelude::*;
 use specs::saveload::{MarkedBuilder, SimpleMarker};

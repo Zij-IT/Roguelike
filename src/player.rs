@@ -2,9 +2,9 @@ use super::{
     components::{
         CombatStats, Item, Monster, Player, Position, Viewshed, WantsToMelee, WantsToPickupItem,
     },
-    map::Map,
-    GameLog, RunState, State, TileType, TILE_BLOCKED,
+    GameLog, RunState, State,
 };
+use crate::{map::*, TileType, TILE_BLOCKED};
 use rltk::{Point, Rltk, VirtualKeyCode};
 use specs::prelude::*;
 

@@ -15,17 +15,16 @@ macro_rules! register_all {
 mod components;
 mod gamelog;
 mod gui;
-mod map;
+mod map_builder;
 mod player;
 mod random_table;
-mod rect;
 mod rex_assets;
 mod spawner;
 mod systems;
 
 use components::*;
 use gamelog::*;
-use map::*;
+use map_builder::*;
 use player::*;
 use random_table::*;
 use spawner::*;
@@ -116,27 +115,30 @@ impl State {
                 .expect("Unable to delete entity during level transition");
         }
 
-        let world_map = {
-            let mut world_map = self.ecs.write_resource::<Map>();
-            let current_depth = world_map.depth;
-            *world_map = Map::new_map_rooms_and_corridors(current_depth + 1);
-            world_map.clone()
-        };
-
-        //Baddies
-        for room in world_map.rooms.iter().skip(1) {
-            spawner::populate_room(&mut self.ecs, room, world_map.depth);
+        //Build new map and place player
+        let mut builder;
+        let player_pos;
+        {
+            let mut world_map_res = self.ecs.write_resource::<Map>();
+            builder = random_builder(world_map_res.depth + 1);
+            builder.build_map();
+            *world_map_res = builder.get_map();
+            player_pos = builder.get_starting_position();
         }
 
-        //Update Player pos, and Player comp resource
-        let (player_x, player_y) = world_map.rooms[0].center();
-        let mut player_pos = self.ecs.write_resource::<Point>();
-        *player_pos = Point::new(player_x, player_y);
+        //Spawn baddies
+        builder.spawn_entities(&mut self.ecs);
+
+        //Change player position
+        let mut player_point = self.ecs.write_resource::<Point>();
+        *player_point = Point::new(player_pos.x, player_pos.y);
+
+        //Change player position comp
         let mut pos_comps = self.ecs.write_storage::<Position>();
         let player_ent = self.ecs.fetch::<Entity>();
         if let Some(pos_comp) = pos_comps.get_mut(*player_ent) {
-            pos_comp.x = player_x;
-            pos_comp.y = player_y;
+            pos_comp.x = player_pos.x;
+            pos_comp.y = player_pos.y;
         }
 
         //Dirty players viewshed
@@ -160,35 +162,38 @@ impl State {
         for ent in to_delete.iter() {
             self.ecs.delete_entity(*ent).expect("Deletion failed");
         }
-        let world_map = {
-            let mut world_map = self.ecs.write_resource::<Map>();
-            *world_map = Map::new_map_rooms_and_corridors(1);
-            world_map.clone()
-        };
 
+        let mut builder;
+        let player_pos;
+        {
+            let mut world_map_res = self.ecs.write_resource::<Map>();
+            builder = random_builder(world_map_res.depth + 1);
+            builder.build_map();
+            *world_map_res = builder.get_map();
+            player_pos = builder.get_starting_position();
+        }
+
+        //Spawn baddies
+        builder.spawn_entities(&mut self.ecs);
+
+        //Add starting message
         let mut logs = self.ecs.write_resource::<GameLog>();
         logs.entries.clear();
         logs.entries.push("Welcome to my Roguelike!".to_string());
         std::mem::drop(logs);
 
-        //Baddies
-        for room in world_map.rooms.iter().skip(1) {
-            spawner::populate_room(&mut self.ecs, room, world_map.depth);
-        }
-
         //Restart World
-        let (player_x, player_y) = world_map.rooms[0].center();
-        let new_player_ent = spawner::spawn_player(&mut self.ecs, player_x, player_y);
+        let new_player_ent = spawner::spawn_player(&mut self.ecs, player_pos.x, player_pos.y);
 
         //Update player resources
         self.ecs.insert(new_player_ent);
-        self.ecs.insert(Point::new(player_x, player_y));
+        self.ecs.insert(Point::new(player_pos.x, player_pos.y));
 
         //Update player movement comp
         let mut position_components = self.ecs.write_storage::<Position>();
         if let Some(player_pos_comp) = position_components.get_mut(new_player_ent) {
-            player_pos_comp.x = player_x;
-            player_pos_comp.y = player_y;
+            player_pos_comp.x = player_pos.x;
+            player_pos_comp.y = player_pos.y;
         }
 
         //Dirty players viewshed
@@ -423,22 +428,21 @@ fn main() -> BError {
     });
     gs.ecs.insert(particle_system::ParticleBuilder::new());
 
-    //Create map and get player location
-    let map = Map::new_map_rooms_and_corridors(1);
+    let mut builder = random_builder(1);
+    builder.build_map();
+    let map = builder.get_map();
+    let player_pos = builder.get_starting_position();
 
-    //Populate rooms in the map with goodies (and baddies)
-    for room in map.rooms.iter().skip(1) {
-        populate_room(&mut gs.ecs, &room, map.depth);
-    }
+    //Spawn baddies
+    builder.spawn_entities(&mut gs.ecs);
 
     //Create player and get location
-    let (player_x, player_y) = map.rooms[0].center();
-    let player_ent = spawn_player(&mut gs.ecs, player_x, player_y);
+    let player_ent = spawn_player(&mut gs.ecs, player_pos.x, player_pos.y);
 
     //Insert entity related resources to insert into world
     gs.ecs.insert(map);
     gs.ecs.insert(player_ent);
-    gs.ecs.insert(Point::new(player_x, player_y));
+    gs.ecs.insert(Point::new(player_pos.x, player_pos.y));
 
     //Start game
     main_loop(context, gs)

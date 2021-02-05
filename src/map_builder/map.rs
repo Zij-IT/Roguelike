@@ -1,4 +1,3 @@
-use super::rect;
 use rltk::{Algorithm2D, BaseMap, Point, Rltk, RGB};
 use serde::{Deserialize, Serialize};
 use specs::prelude::*;
@@ -22,7 +21,6 @@ pub enum TileType {
 pub struct Map {
     pub tiles: Vec<TileType>,
     pub tile_status: Vec<u8>,
-    pub rooms: Vec<rect::Rect>,
     pub width: i32,
     pub height: i32,
     pub depth: i32,
@@ -33,54 +31,15 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn new_map_rooms_and_corridors(new_depth: i32) -> Map {
-        let mut map = Map {
+    pub fn new(new_depth: i32) -> Map {
+        Map {
             tiles: vec![TileType::Wall; (MAP_WIDTH * MAP_HEIGHT) as usize],
             tile_status: vec![0; (MAP_WIDTH * MAP_HEIGHT) as usize],
             tile_content: vec![Vec::new(); (MAP_WIDTH * MAP_HEIGHT) as usize],
-            rooms: vec![],
             width: MAP_WIDTH,
             height: MAP_HEIGHT,
             depth: new_depth,
-        };
-
-        const MAX_ROOMS: i32 = 30;
-        const MIN_SIZE: i32 = 6;
-        const MAX_SIZE: i32 = 10;
-
-        let mut rng = rltk::RandomNumberGenerator::new();
-        for _ in 0..MAX_ROOMS {
-            let w = rng.range(MIN_SIZE, MAX_SIZE);
-            let h = rng.range(MIN_SIZE, MAX_SIZE);
-            let x = rng.roll_dice(1, map.width - w - 1) - 1;
-            let y = rng.roll_dice(1, map.height - h - 1) - 1;
-            let new_room = rect::Rect::new(x, y, w, h);
-
-            if !map.rooms.iter().any(|room| room.intersect(&new_room)) {
-                map.apply_room_to_map(&new_room);
-
-                if !map.rooms.is_empty() {
-                    let (new_x, new_y) = new_room.center();
-                    let (prev_x, prev_y) = map.rooms[map.rooms.len() - 1].center();
-                    if rng.range(0, 2) == 1 {
-                        map.apply_horizontal_tunnel(prev_x, new_x, prev_y);
-                        map.apply_vertical_tunnel(prev_y, new_y, new_x);
-                    } else {
-                        map.apply_vertical_tunnel(prev_y, new_y, new_x);
-                        map.apply_horizontal_tunnel(prev_x, new_x, prev_y);
-                    }
-                }
-
-                map.rooms.push(new_room);
-            }
         }
-
-        //Apply stairs to center of last room
-        let stairs_pos = map.rooms.last().unwrap().center();
-        let stairs_idx = map.xy_idx(stairs_pos.0, stairs_pos.1);
-        map.tiles[stairs_idx] = TileType::StairsDown;
-
-        map
     }
 
     pub fn xy_idx(&self, x: i32, y: i32) -> usize {
@@ -114,33 +73,6 @@ impl Map {
 
     pub fn remove_tile_status(&mut self, idx: usize, status: u8) {
         self.tile_status[idx] &= !(1 << status);
-    }
-
-    fn apply_room_to_map(&mut self, room: &rect::Rect) {
-        for y in room.y1 + 1..=room.y2 {
-            for x in room.x1 + 1..=room.x2 {
-                let idx = self.xy_idx(x, y);
-                self.tiles[idx] = TileType::Floor;
-            }
-        }
-    }
-
-    fn apply_horizontal_tunnel(&mut self, x1: i32, x2: i32, y: i32) {
-        for x in std::cmp::min(x1, x2)..=std::cmp::max(x1, x2) {
-            let idx = self.xy_idx(x, y);
-            if (0..(self.width * self.height)).contains(&(idx as i32)) {
-                self.tiles[idx as usize] = TileType::Floor;
-            }
-        }
-    }
-
-    fn apply_vertical_tunnel(&mut self, y1: i32, y2: i32, x: i32) {
-        for y in std::cmp::min(y1, y2)..=std::cmp::max(y1, y2) {
-            let idx = self.xy_idx(x, y);
-            if (0..(self.width * self.height)).contains(&(idx as i32)) {
-                self.tiles[idx as usize] = TileType::Floor;
-            }
-        }
     }
 
     fn is_exit_valid(&self, x: i32, y: i32) -> bool {
