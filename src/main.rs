@@ -4,9 +4,17 @@ use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
 
 //Macros
 macro_rules! register_all {
-    ($world:expr, $($component:ty),* $(,)*) => {
+    ($ecs:expr, $($component:ty),* $(,)*) => {
         {
-            $($world.register::<$component>();)*
+            $($ecs.register::<$component>();)*
+        }
+    };
+}
+
+macro_rules! insert_all {
+    ($ecs:expr, $($resource:expr),* $(,)*) => {
+        {
+            $($ecs.insert($resource);)*
         }
     };
 }
@@ -27,7 +35,6 @@ use gamelog::*;
 use map_builder::*;
 use player::*;
 use random_table::*;
-use spawner::*;
 use systems::*;
 
 //Enums
@@ -116,38 +123,11 @@ impl State {
         }
 
         //Build new map and place player
-        let mut builder;
-        let player_pos;
-        {
-            let mut world_map_res = self.ecs.write_resource::<Map>();
-            builder = random_builder(world_map_res.depth + 1);
-            builder.build_map();
-            *world_map_res = builder.get_map();
-            player_pos = builder.get_starting_position();
-        }
+        let current_depth = self.ecs.fetch::<Map>().depth;
+        self.generate_world_map(current_depth + 1);
 
-        //Spawn baddies
-        builder.spawn_entities(&mut self.ecs);
-
-        //Change player position
-        let mut player_point = self.ecs.write_resource::<Point>();
-        *player_point = Point::new(player_pos.x, player_pos.y);
-
-        //Change player position comp
-        let mut pos_comps = self.ecs.write_storage::<Position>();
+        //Notify player and heal player
         let player_ent = self.ecs.fetch::<Entity>();
-        if let Some(pos_comp) = pos_comps.get_mut(*player_ent) {
-            pos_comp.x = player_pos.x;
-            pos_comp.y = player_pos.y;
-        }
-
-        //Dirty players viewshed
-        let mut viewsheds = self.ecs.write_storage::<Viewshed>();
-        if let Some(vs) = viewsheds.get_mut(*player_ent) {
-            vs.is_dirty = true;
-        }
-
-        //Notify player
         let mut logs = self.ecs.fetch_mut::<gamelog::GameLog>();
         logs.entries
             .push("You descend to the next level.".to_string());
@@ -163,42 +143,47 @@ impl State {
             self.ecs.delete_entity(*ent).expect("Deletion failed");
         }
 
-        let mut builder;
-        let player_pos;
-        {
-            let mut world_map_res = self.ecs.write_resource::<Map>();
-            builder = random_builder(world_map_res.depth + 1);
-            builder.build_map();
-            *world_map_res = builder.get_map();
-            player_pos = builder.get_starting_position();
-        }
-
-        //Spawn baddies
-        builder.spawn_entities(&mut self.ecs);
-
         //Add starting message
         let mut logs = self.ecs.write_resource::<GameLog>();
         logs.entries.clear();
         logs.entries.push("Welcome to my Roguelike!".to_string());
         std::mem::drop(logs);
 
-        //Restart World
-        let new_player_ent = spawner::spawn_player(&mut self.ecs, player_pos.x, player_pos.y);
+        //Create new player
+        let player_ent = spawner::spawn_player(&mut self.ecs, 0, 0);
+        self.ecs.insert(player_ent);
+        self.ecs.insert(Point::new(0, 0));
 
-        //Update player resources
-        self.ecs.insert(new_player_ent);
-        self.ecs.insert(Point::new(player_pos.x, player_pos.y));
+        //Build a new map and place player
+        self.generate_world_map(1);
+    }
 
-        //Update player movement comp
-        let mut position_components = self.ecs.write_storage::<Position>();
-        if let Some(player_pos_comp) = position_components.get_mut(new_player_ent) {
-            player_pos_comp.x = player_pos.x;
-            player_pos_comp.y = player_pos.y;
+    fn generate_world_map(&mut self, new_depth: i32) {
+        let mut builder = map_builder::random_builder(new_depth);
+        builder.build_map();
+        {
+            let mut world = self.ecs.write_resource::<Map>();
+            *world = builder.get_map();
         }
 
-        //Dirty players viewshed
+        //Pretty self explanatory
+        builder.spawn_entities(&mut self.ecs);
+
+        //Update resources and player
+        let player_start = builder.get_starting_position();
+        let (player_x, player_y) = (player_start.x, player_start.y);
+        let mut player_position = self.ecs.write_resource::<Point>();
+        *player_position = Point::new(player_x, player_y);
+        let mut position_components = self.ecs.write_storage::<Position>();
+        let player_ent = self.ecs.fetch::<Entity>();
+        if let Some(player_pos_comp) = position_components.get_mut(*player_ent) {
+            player_pos_comp.x = player_x;
+            player_pos_comp.y = player_y;
+        }
+
+        //Mark players visibility as dirty
         let mut viewsheds = self.ecs.write_storage::<Viewshed>();
-        if let Some(vs) = viewsheds.get_mut(new_player_ent) {
+        if let Some(vs) = viewsheds.get_mut(*player_ent) {
             vs.is_dirty = true;
         }
     }
@@ -385,6 +370,7 @@ fn main() -> BError {
     let mut gs = State { ecs: World::new() };
 
     //Register the components
+    //gs.ecs must be first, otherwise irrelevant
     register_all!(
         gs.ecs,
         AreaOfEffect,
@@ -417,32 +403,30 @@ fn main() -> BError {
         WantsToUseItem,
     );
 
-    //Insert all non-entity related resources
-    gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
-    gs.ecs.insert(rltk::RandomNumberGenerator::new());
-    gs.ecs.insert(rex_assets::RexAssets::new());
-    gs.ecs
-        .insert(RunState::MainMenu(gui::MainMenuSelection::NewGame));
-    gs.ecs.insert(GameLog {
-        entries: vec!["Welcome to my roguelike".to_string()],
-    });
-    gs.ecs.insert(particle_system::ParticleBuilder::new());
+    //Insert all ecs resources
+    // DEPENDANCIES:
+    //  * RNG <- Map
+    //  * SimpleMarkerAllocator <- player
+    insert_all!(
+        gs.ecs,
+        SimpleMarkerAllocator::<SerializeMe>::new(),
+        rltk::RandomNumberGenerator::new(),
+        Map::new(1),
+        Point::new(0, 0),
+        RunState::MainMenu(gui::MainMenuSelection::NewGame),
+        particle_system::ParticleBuilder::new(),
+        rex_assets::RexAssets::new(),
+        GameLog {
+            entries: vec!["Welcome to my roguelike".to_string()],
+        },
+    );
 
-    let mut builder = random_builder(1);
-    builder.build_map();
-    let map = builder.get_map();
-    let player_pos = builder.get_starting_position();
+    //Unable to insert player due to borrow checker with the others
+    let player_ent = spawner::spawn_player(&mut gs.ecs, 0, 0);
+    insert_all!(gs.ecs, player_ent);
 
-    //Spawn baddies
-    builder.spawn_entities(&mut gs.ecs);
-
-    //Create player and get location
-    let player_ent = spawn_player(&mut gs.ecs, player_pos.x, player_pos.y);
-
-    //Insert entity related resources to insert into world
-    gs.ecs.insert(map);
-    gs.ecs.insert(player_ent);
-    gs.ecs.insert(Point::new(player_pos.x, player_pos.y));
+    //Generate world
+    gs.generate_world_map(1);
 
     //Start game
     main_loop(context, gs)
