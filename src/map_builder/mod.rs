@@ -1,8 +1,10 @@
+pub mod bsp_map_builder;
 pub mod common;
 pub mod map;
 pub mod rect;
 pub mod simple_map_builder;
 
+pub use bsp_map_builder::*;
 pub use common::*;
 pub use map::*;
 pub use rect::*;
@@ -21,5 +23,6 @@ pub trait MapBuilder {
 }
 
 pub fn random_builder(new_depth: i32) -> Box<dyn MapBuilder> {
-    Box::new(SimpleMapBuilder::new(new_depth))
+    //Box::new(SimpleMapBuilder::new(new_depth))
+    Box::new(BSPMapBuilder::new(new_depth))
 }
