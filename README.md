@@ -6,6 +6,10 @@ Currently the game does not support a tile setup. I plan on changing this at som
 
 The library I am using for the heavy-lifting is the [bracket library](https://github.com/thebracket/bracket-lib). The github page also has a link to the tutorial, which this project is based on. I plan on following it in order to build up my algorithm repetoire, and help where my creativity is lacking. 
 
+# State of Game
+
+Game is knowingly NOT in a playable state. Upon clicking new game, the game will create a new map and visualize the map generation. This is expected, and not a bug!
+
 # Current Goals
 - [ ] Feedback (animations)
 - [ ] Accessibility (Color options / Keyboard and/or Mouse playability) 
