@@ -11,6 +11,71 @@ use std::collections::HashMap;
 
 const MAX_SPAWNS: i32 = 9; //Per room
 
+//ROOM POPULATION-----
+pub fn populate_room(ecs: &mut World, room: &Rect, map_depth: i32) {
+    let spawn_table = create_room_table(map_depth);
+    let mut spawn_points: HashMap<(i32, i32), Option<SpawnType>> = HashMap::new();
+
+    let mut rng = ecs.write_resource::<RandomNumberGenerator>();
+    let num_spawns = rng.roll_dice(1, MAX_SPAWNS + 3) + (map_depth - 1) - 3;
+
+    for _ in 0..num_spawns {
+        let mut tries = 20;
+        while tries > 0 {
+            let x = room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1));
+            let y = room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1));
+            if spawn_points.get(&(x, y)).is_some() {
+                tries += 1;
+            } else {
+                spawn_points.insert((x, y), spawn_table.roll(&mut rng));
+                break;
+            }
+        }
+    }
+
+    std::mem::drop(rng);
+    for spawn in spawn_points.iter() {
+        let x = spawn.0 .0;
+        let y = spawn.0 .1;
+
+        match spawn.1 {
+            Some(SpawnType::Goblin) => {
+                spawn_goblin(ecs, x, y);
+            }
+            Some(SpawnType::Kobold) => {
+                spawn_kobold(ecs, x, y);
+            }
+            Some(SpawnType::HealthPotion) => {
+                spawn_health_pot(ecs, x, y);
+            }
+            Some(SpawnType::FireballScroll) => {
+                spawn_fireball_scroll(ecs, x, y);
+            }
+            Some(SpawnType::MagicMissileScroll) => {
+                spawn_magic_missile_scroll(ecs, x, y);
+            }
+            Some(SpawnType::SimpleDagger) => {
+                spawn_simple_dagger(ecs, x, y);
+            }
+            Some(SpawnType::SimpleShield) => {
+                spawn_simple_shield(ecs, x, y);
+            }
+            _ => {}
+        };
+    }
+}
+
+fn create_room_table(map_depth: i32) -> RandomTable {
+    RandomTable::new()
+        .insert(SpawnType::Goblin, 9 + map_depth)
+        .insert(SpawnType::Kobold, 3)
+        .insert(SpawnType::HealthPotion, 7)
+        .insert(SpawnType::FireballScroll, 2 + map_depth)
+        .insert(SpawnType::MagicMissileScroll, 4 + map_depth)
+        .insert(SpawnType::SimpleDagger, 3)
+        .insert(SpawnType::SimpleShield, 3)
+}
+
 //ENTITIES-----------
 pub fn spawn_player(ecs: &mut World, x: i32, y: i32) -> Entity {
     ecs.create_entity()
@@ -184,69 +249,4 @@ fn spawn_simple_shield(ecs: &mut World, x: i32, y: i32) -> Entity {
         .with(DefenseBonus { bonus: 2 })
         .marked::<SimpleMarker<SerializeMe>>()
         .build()
-}
-
-//ROOM POPULATION-----
-pub fn populate_room(ecs: &mut World, room: &Rect, map_depth: i32) {
-    let spawn_table = create_room_table(map_depth);
-    let mut spawn_points: HashMap<(i32, i32), Option<SpawnType>> = HashMap::new();
-
-    let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-    let num_spawns = rng.roll_dice(1, MAX_SPAWNS + 3) + (map_depth - 1) - 3;
-
-    for _ in 0..num_spawns {
-        let mut tries = 20;
-        while tries > 0 {
-            let x = room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1));
-            let y = room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1));
-            if spawn_points.get(&(x, y)).is_some() {
-                tries += 1;
-            } else {
-                spawn_points.insert((x, y), spawn_table.roll(&mut rng));
-                break;
-            }
-        }
-    }
-
-    std::mem::drop(rng);
-    for spawn in spawn_points.iter() {
-        let x = spawn.0 .0;
-        let y = spawn.0 .1;
-
-        match spawn.1 {
-            Some(SpawnType::Goblin) => {
-                spawn_goblin(ecs, x, y);
-            }
-            Some(SpawnType::Kobold) => {
-                spawn_kobold(ecs, x, y);
-            }
-            Some(SpawnType::HealthPotion) => {
-                spawn_health_pot(ecs, x, y);
-            }
-            Some(SpawnType::FireballScroll) => {
-                spawn_fireball_scroll(ecs, x, y);
-            }
-            Some(SpawnType::MagicMissileScroll) => {
-                spawn_magic_missile_scroll(ecs, x, y);
-            }
-            Some(SpawnType::SimpleDagger) => {
-                spawn_simple_dagger(ecs, x, y);
-            }
-            Some(SpawnType::SimpleShield) => {
-                spawn_simple_shield(ecs, x, y);
-            }
-            _ => {}
-        };
-    }
-}
-
-fn create_room_table(map_depth: i32) -> RandomTable {
-    RandomTable::new()
-        .insert(SpawnType::Goblin, 9 + map_depth)
-        .insert(SpawnType::Kobold, 3)
-        .insert(SpawnType::HealthPotion, 7)
-        .insert(SpawnType::FireballScroll, 2 + map_depth)
-        .insert(SpawnType::MagicMissileScroll, 4 + map_depth)
-        .insert(SpawnType::SimpleDagger, 3)
-        .insert(SpawnType::SimpleShield, 3)
 }

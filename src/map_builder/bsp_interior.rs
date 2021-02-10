@@ -1,4 +1,4 @@
-use super::{apply_room_to_map, Map, MapBuilder, Position, Rect, TileType, TILE_REVEALED};
+use super::{Map, MapBuilder, Position, Rect, TileType, TILE_REVEALED};
 use crate::spawner::populate_room;
 use rltk::RandomNumberGenerator;
 use specs::World;

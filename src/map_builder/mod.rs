@@ -1,5 +1,6 @@
 pub mod bsp_interior;
 pub mod bsp_map_builder;
+pub mod cellular_automata_builder;
 pub mod common;
 pub mod map;
 pub mod rect;
@@ -7,6 +8,7 @@ pub mod simple_map_builder;
 
 pub use bsp_interior::*;
 pub use bsp_map_builder::*;
+pub use cellular_automata_builder::*;
 pub use common::*;
 pub use map::*;
 pub use rect::*;
@@ -27,10 +29,11 @@ pub trait MapBuilder {
 
 pub fn random_builder(new_depth: i32) -> Box<dyn MapBuilder> {
     let mut rng = RandomNumberGenerator::new();
-    match rng.roll_dice(1, 3) {
+    match rng.roll_dice(1, 4) {
         1 => Box::new(SimpleMapBuilder::new(new_depth)),
         2 => Box::new(BSPMapBuilder::new(new_depth)),
         3 => Box::new(BSPInteriorBuilder::new(new_depth)),
+        4 => Box::new(CellularAutomataBuilder::new(new_depth)),
         _ => unreachable!(),
     }
 }
