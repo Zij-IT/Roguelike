@@ -85,7 +85,7 @@ impl MapBuilder for CellularAutomataBuilder {
         let dijkstra_map = rltk::DijkstraMap::new(
             self.map.width,
             self.map.height,
-            &vec![start_idx],
+            &[start_idx],
             &self.map,
             MAX_STEPS, //Stop counting at max steps
         );
@@ -112,9 +112,7 @@ impl MapBuilder for CellularAutomataBuilder {
         self.take_snapshot();
     }
 
-    fn spawn_entities(&mut self, ecs: &mut World) {
-        for area in self.noise_areas.iter() {}
-    }
+    fn spawn_entities(&mut self, ecs: &mut World) {}
 
     fn take_snapshot(&mut self) {
         if crate::SHOW_MAPGEN {

@@ -5,7 +5,7 @@ use super::{
     GameLog, RunState, State,
 };
 use crate::{map::*, TileType, TILE_BLOCKED};
-use rltk::{Point, Rltk, VirtualKeyCode};
+use rltk::{Point, Rltk, VirtualKeyCode as VKC};
 use specs::prelude::*;
 
 pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
@@ -15,21 +15,21 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
         }
         Some(key) => match key {
             //Movement keys
-            VirtualKeyCode::H | VirtualKeyCode::Left => try_move_player(-1, 0, &mut gs.ecs),
-            VirtualKeyCode::L | VirtualKeyCode::Right => try_move_player(1, 0, &mut gs.ecs),
-            VirtualKeyCode::K | VirtualKeyCode::Up => try_move_player(0, -1, &mut gs.ecs),
-            VirtualKeyCode::J | VirtualKeyCode::Down => try_move_player(0, 1, &mut gs.ecs),
+            VKC::H | VKC::Left => try_move_player(-1, 0, &mut gs.ecs),
+            VKC::L | VKC::Right => try_move_player(1, 0, &mut gs.ecs),
+            VKC::K | VKC::Up => try_move_player(0, -1, &mut gs.ecs),
+            VKC::J | VKC::Down => try_move_player(0, 1, &mut gs.ecs),
             //Item keys
-            VirtualKeyCode::G => get_item(&mut gs.ecs),
-            VirtualKeyCode::I => return RunState::ShowInventory,
-            VirtualKeyCode::D => return RunState::ShowDropItem,
-            VirtualKeyCode::R => return RunState::ShowRemoveItem,
+            VKC::G => get_item(&mut gs.ecs),
+            VKC::I => return RunState::ShowInventory,
+            VKC::D => return RunState::ShowDropItem,
+            VKC::R => return RunState::ShowRemoveItem,
             //Save key
-            VirtualKeyCode::Escape => return RunState::SaveGame,
+            VKC::Escape => return RunState::SaveGame,
             //Skip key
-            VirtualKeyCode::Space => return skip_turn(&mut gs.ecs),
+            VKC::Space => return skip_turn(&mut gs.ecs),
             //Descend Key
-            VirtualKeyCode::Period => {
+            VKC::Period => {
                 if try_next_level(&mut gs.ecs) {
                     return RunState::NextLevel;
                 }

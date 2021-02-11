@@ -1,11 +1,29 @@
+//External includes
 use rltk::prelude::*;
 use specs::prelude::*;
 use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
+
+//Internal mods and includes
+mod ecs;
+mod gui;
+mod map_builder;
+mod player;
+mod random_table;
+mod rex_assets;
+mod save_load_util;
+mod spawner;
+
+use ecs::*;
+use map_builder::*;
+use player::*;
+use random_table::*;
 
 //Constants
 const SHOW_MAPGEN: bool = true;
 
 //Macros
+
+///Given a specs::World, and a list of components, it registers all components in the world
 macro_rules! register_all {
     ($ecs:expr, $($component:ty),* $(,)*) => {
         {
@@ -14,6 +32,7 @@ macro_rules! register_all {
     };
 }
 
+///Given a specs::World, and a list of resources, it inserts all resources in the world
 macro_rules! insert_all {
     ($ecs:expr, $($resource:expr),* $(,)*) => {
         {
@@ -22,25 +41,6 @@ macro_rules! insert_all {
     };
 }
 
-//All mods
-mod components;
-mod gamelog;
-mod gui;
-mod map_builder;
-mod player;
-mod random_table;
-mod rex_assets;
-mod spawner;
-mod systems;
-
-use components::*;
-use gamelog::*;
-use map_builder::*;
-use player::*;
-use random_table::*;
-use systems::*;
-
-//Enums
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum RunState {
     AwaitingInput,
@@ -68,6 +68,7 @@ pub struct State {
 }
 
 impl State {
+    ///Runs through all systems
     fn run_systems(&mut self) {
         let mut vis = VisibilitySystem {};
         let mut mons = MonsterAI {};
@@ -94,6 +95,7 @@ impl State {
         self.ecs.maintain();
     }
 
+    ///Gathers all entities that are not related to the player
     fn entities_to_remove_on_level_change(&mut self) -> Vec<Entity> {
         let entities = self.ecs.entities();
         let player_ent = self.ecs.fetch::<Entity>();
@@ -123,6 +125,7 @@ impl State {
         to_delete
     }
 
+    ///Generates next level for the player to explore
     fn goto_next_level(&mut self) {
         let to_delete = self.entities_to_remove_on_level_change();
         for target in to_delete {
@@ -137,7 +140,7 @@ impl State {
 
         //Notify player and heal player
         let player_ent = self.ecs.fetch::<Entity>();
-        let mut logs = self.ecs.fetch_mut::<gamelog::GameLog>();
+        let mut logs = self.ecs.fetch_mut::<GameLog>();
         logs.entries
             .push("You descend to the next level.".to_string());
         let mut all_stats = self.ecs.write_storage::<CombatStats>();
@@ -146,11 +149,10 @@ impl State {
         }
     }
 
+    ///Deletes all entities, and sets up for next game
     fn game_over_cleanup(&mut self) {
-        let to_delete = self.ecs.entities().join().collect::<Vec<_>>();
-        for ent in to_delete.iter() {
-            self.ecs.delete_entity(*ent).expect("Deletion failed");
-        }
+        self.ecs.delete_all();
+        self.ecs.maintain();
 
         //Add starting message
         let mut logs = self.ecs.write_resource::<GameLog>();
@@ -158,7 +160,7 @@ impl State {
         logs.entries.push("Welcome to my Roguelike!".to_string());
         std::mem::drop(logs);
 
-        //Create new player
+        //Create new player resource
         let player_ent = spawner::spawn_player(&mut self.ecs, 0, 0);
         self.ecs.insert(player_ent);
         self.ecs.insert(Point::new(0, 0));
@@ -167,6 +169,7 @@ impl State {
         self.generate_world_map(1);
     }
 
+    ///Generates a new level using random_builder with the specified depth
     fn generate_world_map(&mut self, new_depth: i32) {
         //Visualizing mapgen
         self.mapgen_index = 0;
@@ -181,10 +184,10 @@ impl State {
         }
         self.mapgen_history = builder.get_snapshot_history();
 
-        //Pretty self explanatory
         builder.spawn_entities(&mut self.ecs);
 
-        //Update resources and player
+        //Updates the players position based on the new map generated
+        //Also must update the player component, and the player pos resource
         let player_start = builder.get_starting_position();
         let (player_x, player_y) = (player_start.x, player_start.y);
         let mut player_position = self.ecs.write_resource::<Point>();
@@ -196,7 +199,6 @@ impl State {
             player_pos_comp.y = player_y;
         }
 
-        //Mark players visibility as dirty
         let mut viewsheds = self.ecs.write_storage::<Viewshed>();
         if let Some(vs) = viewsheds.get_mut(*player_ent) {
             vs.is_dirty = true;
@@ -210,7 +212,8 @@ impl GameState for State {
         particle_system::cull_dead_particles(&mut self.ecs, ctx);
 
         let mut next_state = *self.ecs.fetch::<RunState>();
-        //Draw map & entities
+
+        //Draw map & renderables
         match next_state {
             RunState::MainMenu(_) => {}
             _ => {
@@ -234,7 +237,7 @@ impl GameState for State {
             }
         }
 
-        //FSM
+        //Calculates next state based on current state
         match next_state {
             RunState::PreRun => {
                 self.run_systems();
@@ -250,6 +253,14 @@ impl GameState for State {
             RunState::MonsterTurn => {
                 self.run_systems();
                 next_state = RunState::AwaitingInput;
+            }
+            RunState::SaveGame => {
+                save_load_util::save_game(&mut self.ecs);
+                next_state = RunState::MainMenu(gui::MainMenuSelection::LoadGame);
+            }
+            RunState::NextLevel => {
+                self.goto_next_level();
+                next_state = RunState::PreRun;
             }
             RunState::ShowInventory => {
                 let (item_res, selected_item) = gui::show_inventory(self, ctx);
@@ -343,10 +354,10 @@ impl GameState for State {
                         }
                     }
                     gui::MainMenuSelection::LoadGame => {
-                        if saveload_system::does_save_exist() {
-                            saveload_system::load_game(&mut self.ecs);
+                        if save_load_util::does_save_exist() {
+                            save_load_util::load_game(&mut self.ecs);
                             next_state = RunState::AwaitingInput;
-                            saveload_system::delete_save();
+                            save_load_util::delete_save();
                         } else {
                             next_state = RunState::MainMenu(option);
                         }
@@ -363,14 +374,6 @@ impl GameState for State {
                         next_state = RunState::MainMenu(gui::MainMenuSelection::NewGame);
                     }
                 }
-            }
-            RunState::SaveGame => {
-                saveload_system::save_game(&mut self.ecs);
-                next_state = RunState::MainMenu(gui::MainMenuSelection::LoadGame);
-            }
-            RunState::NextLevel => {
-                self.goto_next_level();
-                next_state = RunState::PreRun;
             }
             RunState::MapGeneration => {
                 if !SHOW_MAPGEN {
@@ -394,6 +397,10 @@ impl GameState for State {
         self.ecs.insert::<RunState>(next_state);
         DamageSystem::delete_the_dead(&mut self.ecs);
     }
+}
+
+pub struct GameLog {
+    pub entries: Vec<String>,
 }
 
 fn main() -> BError {
@@ -446,10 +453,9 @@ fn main() -> BError {
         WantsToUseItem,
     );
 
-    //Insert all ecs resources
-    // DEPENDANCIES:
-    //  * RNG <- Map
-    //  * SimpleMarkerAllocator <- player
+    //gs.ecs must be first, otherwise follow the dependencies
+    //DEPENDANCIES:
+    //player -> SimpleMarkerAllocator
     insert_all!(
         gs.ecs,
         SimpleMarkerAllocator::<SerializeMe>::new(),
@@ -464,11 +470,12 @@ fn main() -> BError {
         },
     );
 
-    //Unable to insert player due to borrow checker with the others
+    //Unable to include this statement in the above batch due to the borrow checker
+    //Reason: Both World::insert and spawn_player both borrow mutably
     let player_ent = spawner::spawn_player(&mut gs.ecs, 0, 0);
     insert_all!(gs.ecs, player_ent);
 
-    //Generate world
+    //Generate map
     gs.generate_world_map(1);
 
     //Start game
