@@ -19,10 +19,9 @@ use player::*;
 use random_table::*;
 
 //Constants
-const SHOW_MAPGEN: bool = true;
+const SHOW_MAPGEN: bool = false;
 
 //Macros
-
 ///Given a specs::World, and a list of components, it registers all components in the world
 macro_rules! register_all {
     ($ecs:expr, $($component:ty),* $(,)*) => {
@@ -378,16 +377,17 @@ impl GameState for State {
             RunState::MapGeneration => {
                 if !SHOW_MAPGEN {
                     next_state = self.mapgen_next_state.unwrap();
-                }
-                ctx.cls();
-                draw_map(&self.mapgen_history[self.mapgen_index], ctx);
+                } else {
+                    ctx.cls();
+                    draw_map(&self.mapgen_history[self.mapgen_index], ctx);
 
-                self.mapgen_timer += ctx.frame_time_ms;
-                if self.mapgen_timer > 200.0 {
-                    self.mapgen_timer = 0.0;
-                    self.mapgen_index += 1;
-                    if self.mapgen_index >= self.mapgen_history.len() {
-                        next_state = self.mapgen_next_state.unwrap();
+                    self.mapgen_timer += ctx.frame_time_ms;
+                    if self.mapgen_timer > 200.0 {
+                        self.mapgen_timer = 0.0;
+                        self.mapgen_index += 1;
+                        if self.mapgen_index >= self.mapgen_history.len() {
+                            next_state = self.mapgen_next_state.unwrap();
+                        }
                     }
                 }
             }

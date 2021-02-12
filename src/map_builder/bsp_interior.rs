@@ -132,7 +132,7 @@ impl MapBuilder for BSPInteriorBuilder {
 
     fn spawn_entities(&mut self, ecs: &mut World) {
         for room in self.rooms.iter().skip(1) {
-            populate_room(ecs, room, self.map.depth);
+            populate_room(ecs, room);
         }
     }
 

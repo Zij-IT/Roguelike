@@ -1,79 +1,99 @@
 use super::{
     AreaOfEffect, BlocksTile, CombatStats, Consumable, DefenseBonus, Equipable, EquipmentSlot,
     InflictsDamage, Item, MeleeDamageBonus, Monster, Name, Player, Position, ProvidesHealing,
-    RandomTable, Ranged, Renderable, SerializeMe, SpawnType, Viewshed,
+    RandomTable, Ranged, Renderable, SerializeMe, Viewshed,
 };
-use crate::rect::Rect;
+use crate::{rect::Rect, Map, TileType};
 use rltk::{RandomNumberGenerator, RGB};
 use specs::prelude::*;
 use specs::saveload::{MarkedBuilder, SimpleMarker};
 use std::collections::HashMap;
 
-const MAX_SPAWNS: i32 = 9; //Per room
+const MAX_MONSTERS: i32 = 4;
 
 //ROOM POPULATION-----
-pub fn populate_room(ecs: &mut World, room: &Rect, map_depth: i32) {
-    let spawn_table = create_room_table(map_depth);
-    let mut spawn_points: HashMap<(i32, i32), Option<SpawnType>> = HashMap::new();
-
-    let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-    let num_spawns = rng.roll_dice(1, MAX_SPAWNS + 3) + (map_depth - 1) - 3;
-
-    for _ in 0..num_spawns {
-        let mut tries = 20;
-        while tries > 0 {
-            let x = room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1));
-            let y = room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1));
-            if spawn_points.get(&(x, y)).is_some() {
-                tries += 1;
-            } else {
-                spawn_points.insert((x, y), spawn_table.roll(&mut rng));
-                break;
+pub fn populate_room(ecs: &mut World, room: &Rect) {
+    let mut possible_spawns = Vec::new();
+    let map = ecs.fetch::<Map>();
+    let map_depth = map.depth;
+    for y in room.y1 + 1..room.y2 {
+        for x in room.x1 + 1..room.x2 {
+            let idx = map.xy_idx(x, y);
+            if map.tiles[idx] == TileType::Floor {
+                possible_spawns.push((x, y));
             }
         }
+    }
+    std::mem::drop(map);
+    spawn_region(ecs, &possible_spawns, map_depth);
+}
+
+pub fn spawn_region(ecs: &mut World, area: &[(i32, i32)], map_depth: i32) {
+    let spawn_table = create_room_table(map_depth);
+    let mut rng = ecs.write_resource::<RandomNumberGenerator>();
+    let mut spawn_points = HashMap::new();
+    let mut areas = Vec::from(area);
+
+    let num_spawns = i32::min(
+        areas.len() as i32,
+        rng.roll_dice(1, MAX_MONSTERS + 3) + map_depth - 1 - 3,
+    );
+
+    for _ in 0..num_spawns {
+        let array_index = if areas.len() == 1 {
+            0usize
+        } else {
+            (rng.roll_dice(1, areas.len() as i32) - 1) as usize
+        };
+        let map_point = areas[array_index];
+        if let Some(spawn) = spawn_table.roll(&mut rng) {
+            spawn_points.insert(map_point, spawn);
+        }
+        areas.remove(array_index);
     }
 
     std::mem::drop(rng);
     for spawn in spawn_points.iter() {
-        let x = spawn.0 .0;
-        let y = spawn.0 .1;
-
-        match spawn.1 {
-            Some(SpawnType::Goblin) => {
-                spawn_goblin(ecs, x, y);
-            }
-            Some(SpawnType::Kobold) => {
-                spawn_kobold(ecs, x, y);
-            }
-            Some(SpawnType::HealthPotion) => {
-                spawn_health_pot(ecs, x, y);
-            }
-            Some(SpawnType::FireballScroll) => {
-                spawn_fireball_scroll(ecs, x, y);
-            }
-            Some(SpawnType::MagicMissileScroll) => {
-                spawn_magic_missile_scroll(ecs, x, y);
-            }
-            Some(SpawnType::SimpleDagger) => {
-                spawn_simple_dagger(ecs, x, y);
-            }
-            Some(SpawnType::SimpleShield) => {
-                spawn_simple_shield(ecs, x, y);
-            }
-            _ => {}
-        };
+        spawn_named_entity(ecs, &spawn);
     }
+}
+
+fn spawn_named_entity(ecs: &mut World, ((x, y), name): &(&(i32, i32), &String)) {
+    match name.as_ref() {
+        "Goblin" => {
+            spawn_goblin(ecs, *x, *y);
+        }
+        "Kobold" => {
+            spawn_kobold(ecs, *x, *y);
+        }
+        "HealthPotion" => {
+            spawn_health_pot(ecs, *x, *y);
+        }
+        "FireballScroll" => {
+            spawn_fireball_scroll(ecs, *x, *y);
+        }
+        "MagicMissileScroll" => {
+            spawn_magic_missile_scroll(ecs, *x, *y);
+        }
+        "SimpleDagger" => {
+            spawn_simple_dagger(ecs, *x, *y);
+        }
+        "SimpleShield" => {
+            spawn_simple_shield(ecs, *x, *y);
+        }
+        _ => {}
+    };
 }
 
 fn create_room_table(map_depth: i32) -> RandomTable {
     RandomTable::new()
-        .insert(SpawnType::Goblin, 9 + map_depth)
-        .insert(SpawnType::Kobold, 3)
-        .insert(SpawnType::HealthPotion, 7)
-        .insert(SpawnType::FireballScroll, 2 + map_depth)
-        .insert(SpawnType::MagicMissileScroll, 4 + map_depth)
-        .insert(SpawnType::SimpleDagger, 3)
-        .insert(SpawnType::SimpleShield, 3)
+        .insert("Goblin", 9 + map_depth)
+        .insert("Kobold", 3)
+        .insert("HealthPotion", 7)
+        .insert("FireballScroll", 2 + map_depth)
+        .insert("MagicMissileScroll", 4 + map_depth)
+        .insert("SimpleDagger", 3)
+        .insert("SimpleShield", 3)
 }
 
 //ENTITIES-----------

@@ -1,24 +1,16 @@
 use rltk::RandomNumberGenerator;
 
-#[derive(Clone)]
-pub enum SpawnType {
-    Goblin,
-    Kobold,
-    HealthPotion,
-    FireballScroll,
-    MagicMissileScroll,
-    SimpleDagger,
-    SimpleShield,
-}
-
 pub struct RandomEntry {
-    s_type: SpawnType,
+    name: String,
     weight: i32,
 }
 
 impl RandomEntry {
-    pub fn new(s_type: SpawnType, weight: i32) -> RandomEntry {
-        RandomEntry { s_type, weight }
+    pub fn new<StrType: ToString>(name: StrType, weight: i32) -> RandomEntry {
+        RandomEntry {
+            name: name.to_string(),
+            weight,
+        }
     }
 }
 
@@ -36,15 +28,15 @@ impl RandomTable {
         }
     }
 
-    pub fn insert(mut self, s_type: SpawnType, weight: i32) -> RandomTable {
+    pub fn insert<StrType: ToString>(mut self, name: StrType, weight: i32) -> RandomTable {
         if weight > 0 {
             self.total_weight += weight;
-            self.entries.push(RandomEntry::new(s_type, weight));
+            self.entries.push(RandomEntry::new(name, weight));
         }
         self
     }
 
-    pub fn roll(&self, rng: &mut RandomNumberGenerator) -> Option<SpawnType> {
+    pub fn roll(&self, rng: &mut RandomNumberGenerator) -> Option<String> {
         if self.total_weight == 0 {
             return None;
         }
@@ -53,7 +45,7 @@ impl RandomTable {
 
         while roll > 0 {
             if roll < self.entries[index].weight {
-                return Some(self.entries[index].s_type.clone());
+                return Some(self.entries[index].name.clone());
             }
             roll -= self.entries[index].weight;
             index += 1;
