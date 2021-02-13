@@ -4,6 +4,9 @@ use super::{
 use rltk::{Point, Rltk, VirtualKeyCode, RGB};
 use specs::prelude::*;
 
+const BACKGROUND: &str = "#110016";
+const FOREGROUND: &str = "#f3fbf1";
+
 pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
     ctx.draw_box(
         0,
@@ -305,8 +308,6 @@ pub fn draw_main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
 
     if let RunState::MainMenu(current_selection) = *(gs.ecs.fetch::<RunState>()) {
         let selected = RGB::named(rltk::YELLOW);
-        let not_selected = RGB::named(rltk::WHITE);
-        let background = (51, 51, 51);
 
         let base_y = 45;
 
@@ -315,9 +316,9 @@ pub fn draw_main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
             if current_selection == MainMenuSelection::NewGame {
                 selected
             } else {
-                not_selected
+                RGB::from_hex(FOREGROUND).unwrap()
             },
-            background,
+            RGB::from_hex(BACKGROUND).unwrap(),
             "Begin New Game",
         );
 
@@ -326,9 +327,9 @@ pub fn draw_main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
             if current_selection == MainMenuSelection::LoadGame {
                 selected
             } else {
-                not_selected
+                RGB::from_hex(FOREGROUND).unwrap()
             },
-            background,
+            RGB::from_hex(BACKGROUND).unwrap(),
             "Load Game",
         );
 
@@ -337,9 +338,9 @@ pub fn draw_main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
             if current_selection == MainMenuSelection::Quit {
                 selected
             } else {
-                not_selected
+                RGB::from_hex(FOREGROUND).unwrap()
             },
-            background,
+            RGB::from_hex(BACKGROUND).unwrap(),
             "Quit",
         );
 

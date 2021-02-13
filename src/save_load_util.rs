@@ -98,7 +98,7 @@ pub fn load_game(ecs: &mut World) {
         }
     }
 
-    let data = fs::read_to_string("./savegame.json").unwrap();
+    let data = fs::read_to_string("./saves/savegame.json").unwrap();
     let mut de = serde_json::Deserializer::from_str(&data);
 
     {
@@ -164,11 +164,11 @@ pub fn load_game(ecs: &mut World) {
 }
 
 pub fn does_save_exist() -> bool {
-    Path::new("./savegame.json").exists()
+    Path::new("./saves/savegame.json").exists()
 }
 
 pub fn delete_save() {
     if does_save_exist() {
-        std::fs::remove_file("./savegame.json").expect("Unable to delete file");
+        std::fs::remove_file("./saves/savegame.json").expect("Unable to delete file");
     }
 }
