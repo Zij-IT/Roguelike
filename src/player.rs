@@ -4,7 +4,7 @@ use super::{
     },
     GameLog, RunState, State,
 };
-use crate::{map::*, TileType, TILE_BLOCKED};
+use crate::{map::*, TileStatus, TileType};
 use rltk::{Point, Rltk, VirtualKeyCode as VKC};
 use specs::prelude::*;
 
@@ -81,7 +81,7 @@ fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
         }
 
         //If not blocked, moves the player there
-        if !map.is_tile_status_set(destination_idx, TILE_BLOCKED) {
+        if !map.is_tile_status_set(destination_idx, TileStatus::Blocked) {
             pos.x = std::cmp::min(79, std::cmp::max(0, pos.x + delta_x));
             pos.y = std::cmp::min(49, std::cmp::max(0, pos.y + delta_y));
             let mut ppos = ecs.write_resource::<Point>();

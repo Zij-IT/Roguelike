@@ -1,4 +1,4 @@
-use crate::{BlocksTile, Map, Position, TILE_BLOCKED};
+use crate::{BlocksTile, Map, Position, TileStatus};
 use specs::prelude::*;
 
 pub struct MapIndexingSystem {}
@@ -19,7 +19,7 @@ impl<'a> System<'a> for MapIndexingSystem {
         for (position, entity) in (&position, &entities).join() {
             let idx = map.xy_idx(position.x, position.y);
             if blockers.get(entity).is_some() {
-                map.set_tile_status(idx, TILE_BLOCKED);
+                map.set_tile_status(idx, TileStatus::Blocked);
             }
             map.tile_content[idx].push(entity);
         }

@@ -1,9 +1,5 @@
-use super::common::*;
-use super::map::*;
-use super::rect;
-use super::MapBuilder;
-use crate::components::Position;
-use crate::spawner::*;
+use super::{common::*, map::*, rect, MapBuilder};
+use crate::{components::Position, spawner::*};
 use specs::World;
 
 pub struct SimpleMapBuilder {
@@ -95,7 +91,7 @@ impl MapBuilder for SimpleMapBuilder {
         if crate::SHOW_MAPGEN {
             let mut snapshot = self.get_map();
             for tile in 0..snapshot.tile_status.len() {
-                snapshot.set_tile_status(tile, TILE_REVEALED);
+                snapshot.set_tile_status(tile, TileStatus::Revealed);
             }
             self.history.push(snapshot);
         }

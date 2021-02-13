@@ -6,9 +6,11 @@ pub const MAP_HEIGHT: i32 = 43;
 pub const MAP_WIDTH: i32 = 80;
 
 //Tile Statuses
-pub const TILE_REVEALED: u8 = 0;
-pub const TILE_VISIBLE: u8 = 1;
-pub const TILE_BLOCKED: u8 = 2;
+pub enum TileStatus {
+    Revealed = 0,
+    Visible,
+    Blocked,
+}
 
 #[derive(PartialEq, Copy, Clone, Deserialize, Serialize)]
 pub enum TileType {
@@ -49,9 +51,9 @@ impl Map {
     pub fn populate_blocked(&mut self) {
         for idx in 0..self.tiles.len() {
             if self.tiles[idx] == TileType::Wall {
-                self.set_tile_status(idx, TILE_BLOCKED);
+                self.set_tile_status(idx, TileStatus::Blocked);
             } else {
-                self.remove_tile_status(idx, TILE_BLOCKED);
+                self.remove_tile_status(idx, TileStatus::Blocked);
             }
         }
     }
@@ -63,16 +65,16 @@ impl Map {
     }
 
     //100 = blocked, 010 = visible, 001 = revealed
-    pub fn is_tile_status_set(&self, idx: usize, status: u8) -> bool {
-        (self.tile_status[idx] & (1 << status)) != 0
+    pub fn is_tile_status_set(&self, idx: usize, status: TileStatus) -> bool {
+        (self.tile_status[idx] & (1 << status as u8)) != 0
     }
 
-    pub fn set_tile_status(&mut self, idx: usize, status: u8) {
-        self.tile_status[idx] |= 1 << (status);
+    pub fn set_tile_status(&mut self, idx: usize, status: TileStatus) {
+        self.tile_status[idx] |= 1 << (status as u8);
     }
 
-    pub fn remove_tile_status(&mut self, idx: usize, status: u8) {
-        self.tile_status[idx] &= !(1 << status);
+    pub fn remove_tile_status(&mut self, idx: usize, status: TileStatus) {
+        self.tile_status[idx] &= !(1 << status as u8);
     }
 
     fn is_exit_valid(&self, x: i32, y: i32) -> bool {
@@ -80,7 +82,7 @@ impl Map {
             return false;
         }
         let idx = self.xy_idx(x, y);
-        !self.is_tile_status_set(idx, TILE_BLOCKED)
+        !self.is_tile_status_set(idx, TileStatus::Blocked)
     }
 }
 
@@ -137,7 +139,7 @@ impl BaseMap for Map {
 ///Prints out the map to the rltk::Console
 pub fn draw_map(map: &Map, ctx: &mut Rltk) {
     for (pos, tile) in map.tiles.iter().enumerate() {
-        if map.is_tile_status_set(pos, TILE_REVEALED) {
+        if map.is_tile_status_set(pos, TileStatus::Revealed) {
             let x = pos as i32 % map.width;
             let y = pos as i32 / map.width;
 
@@ -147,7 +149,7 @@ pub fn draw_map(map: &Map, ctx: &mut Rltk) {
                 TileType::StairsDown => (174, RGB::from_f32(0., 1.0, 1.0)),
             };
 
-            if !map.is_tile_status_set(pos, TILE_VISIBLE) {
+            if !map.is_tile_status_set(pos, TileStatus::Visible) {
                 fg = fg.to_greyscale();
             }
 

@@ -225,7 +225,7 @@ impl GameState for State {
                     data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
                     for (pos, render) in data.iter() {
                         let idx = map.xy_idx(pos.x, pos.y);
-                        if map.is_tile_status_set(idx, TILE_VISIBLE) {
+                        if map.is_tile_status_set(idx, TileStatus::Visible) {
                             ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
                         }
                     }
