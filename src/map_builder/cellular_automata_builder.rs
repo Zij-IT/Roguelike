@@ -75,14 +75,17 @@ impl MapBuilder for CellularAutomataBuilder {
         }
 
         //Find start tile. Go left up until a floor tile is found. Go up after x = 0
-        let (x, y) = (self.map.width / 2, self.map.height / 2);
-        let mut start_idx = self.map.xy_idx(x, y);
-        while self.map.tiles[start_idx] == TileType::Floor {
+        let (center_x, center_y) = (self.map.width / 2, self.map.height / 2);
+        let mut start_idx = self.map.xy_idx(center_x, center_y);
+        while self.map.tiles[start_idx] != TileType::Floor {
             start_idx -= 1;
         }
 
         //Creating start pos
-        self.starting_position = Position { x, y };
+        self.starting_position = Position {
+            x: start_idx as i32 % self.map.width,
+            y: start_idx as i32 / self.map.width,
+        };
 
         //Finding exit
         let dijkstra_map = rltk::DijkstraMap::new(
