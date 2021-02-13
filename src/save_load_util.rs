@@ -7,6 +7,8 @@ use specs::saveload::{
 use std::fs;
 use std::path::Path;
 
+const SAVE_PATH: &str = "./saves/savegame.json";
+
 macro_rules! serialize_individually {
     ($ecs:expr, $ser:expr, $data:expr, $( $type:ty),* $(,)?) => {
         $(
@@ -48,7 +50,7 @@ pub fn save_game(ecs: &mut World) {
             ecs.entities(),
             ecs.read_storage::<SimpleMarker<SerializeMe>>(),
         );
-        let writer = std::fs::File::create("./saves/savegame.json").unwrap();
+        let writer = std::fs::File::create(SAVE_PATH).unwrap();
         let mut serializer = serde_json::Serializer::new(writer);
         serialize_individually!(
             ecs,
@@ -67,6 +69,7 @@ pub fn save_game(ecs: &mut World) {
             MeleeDamageBonus,
             Monster,
             Name,
+            ParticleLifetime,
             Player,
             Position,
             ProvidesHealing,
@@ -98,7 +101,7 @@ pub fn load_game(ecs: &mut World) {
         }
     }
 
-    let data = fs::read_to_string("./saves/savegame.json").unwrap();
+    let data = fs::read_to_string(SAVE_PATH).unwrap();
     let mut de = serde_json::Deserializer::from_str(&data);
 
     {
@@ -115,13 +118,16 @@ pub fn load_game(ecs: &mut World) {
             BlocksTile,
             CombatStats,
             Consumable,
+            DefenseBonus,
             Equipable,
             Equipped,
             InBackpack,
             InflictsDamage,
             Item,
+            MeleeDamageBonus,
             Monster,
             Name,
+            ParticleLifetime,
             Player,
             Position,
             ProvidesHealing,
@@ -164,11 +170,11 @@ pub fn load_game(ecs: &mut World) {
 }
 
 pub fn does_save_exist() -> bool {
-    Path::new("./saves/savegame.json").exists()
+    Path::new(SAVE_PATH).exists()
 }
 
 pub fn delete_save() {
     if does_save_exist() {
-        std::fs::remove_file("./saves/savegame.json").expect("Unable to delete file");
+        std::fs::remove_file(SAVE_PATH).expect("Unable to delete file");
     }
 }
