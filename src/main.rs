@@ -232,7 +232,7 @@ impl GameState for State {
                 }
 
                 //GUI
-                gui::draw_ui(&self.ecs, ctx);
+                gui::draw_ingame_ui(&self.ecs, ctx);
             }
         }
 
@@ -307,7 +307,7 @@ impl GameState for State {
                 }
             }
             RunState::ShowRemoveItem => {
-                let (item_res, selected_item) = gui::show_remove_inventory(self, ctx);
+                let (item_res, selected_item) = gui::show_inventory(self, ctx);
                 match item_res {
                     gui::ItemMenuResult::Selected => {
                         let selected_item = selected_item.unwrap();
