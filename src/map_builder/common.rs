@@ -1,6 +1,7 @@
 use super::{Map, Rect, TileType};
 use std::collections::HashMap;
 
+pub const EDGE_BUFFER: i32 = 2;
 const MAX_STEPS: f32 = 200.0;
 
 ///Given a room, it fills the inner part of the with floors.

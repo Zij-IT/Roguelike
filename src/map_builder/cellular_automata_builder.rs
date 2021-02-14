@@ -5,7 +5,6 @@ use specs::World;
 use std::collections::HashMap;
 
 const MAX_ITERATIONS: usize = 15;
-const EDGE_BUFFER: i32 = 2;
 
 pub struct CellularAutomataBuilder {
     map: Map,

@@ -1,9 +1,8 @@
-use super::{Map, MapBuilder, Position, Rect, TileStatus, TileType};
+use super::{common::EDGE_BUFFER, Map, MapBuilder, Position, Rect, TileStatus, TileType};
 use crate::spawner::populate_room;
 use rltk::RandomNumberGenerator;
 use specs::World;
 
-const EDGE_BUFFER: i32 = 1;
 const MIN_ROOM_SIZE: i32 = 8;
 
 pub struct BSPInteriorBuilder {

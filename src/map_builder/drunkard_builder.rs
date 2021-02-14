@@ -94,22 +94,22 @@ impl MapBuilder for DrunkardsBuilder {
                 self.map.tiles[drunk_idx] = TileType::Floor;
                 match rng.roll_dice(1, 4) {
                     1 => {
-                        if drunk_x > 2 {
+                        if drunk_x > EDGE_BUFFER {
                             drunk_x -= 1
                         }
                     }
                     2 => {
-                        if drunk_y > 2 {
+                        if drunk_y > EDGE_BUFFER {
                             drunk_y -= 1;
                         }
                     }
                     3 => {
-                        if drunk_x < self.map.width - 2 {
+                        if drunk_x < self.map.width - EDGE_BUFFER {
                             drunk_x += 1;
                         }
                     }
                     _ => {
-                        if drunk_y < self.map.height - 2 {
+                        if drunk_y < self.map.height - EDGE_BUFFER {
                             drunk_y += 1;
                         }
                     }

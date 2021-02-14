@@ -4,7 +4,6 @@ use rltk::RandomNumberGenerator;
 use specs::World;
 
 const MAX_ATTEMPTS: usize = 240;
-const EDGE_BUFFER: i32 = 2;
 
 pub struct BSPMapBuilder {
     map: Map,

@@ -4,6 +4,7 @@ pub mod cellular_automata_builder;
 pub mod common;
 pub mod drunkard_builder;
 pub mod map;
+pub mod maze_builder;
 pub mod rect;
 pub mod simple_map_builder;
 
@@ -13,6 +14,7 @@ pub use cellular_automata_builder::*;
 pub use common::*;
 pub use drunkard_builder::*;
 pub use map::*;
+pub use maze_builder::*;
 pub use rect::*;
 pub use simple_map_builder::*;
 
@@ -31,7 +33,7 @@ pub trait MapBuilder {
 
 pub fn random_builder(new_depth: i32) -> Box<dyn MapBuilder> {
     let mut rng = RandomNumberGenerator::new();
-    match rng.roll_dice(1, 5) {
+    match rng.roll_dice(1, 6) {
         1 => Box::new(SimpleMapBuilder::new(new_depth)),
         2 => Box::new(BSPMapBuilder::new(new_depth)),
         3 => Box::new(BSPInteriorBuilder::new(new_depth)),
@@ -41,6 +43,7 @@ pub fn random_builder(new_depth: i32) -> Box<dyn MapBuilder> {
             DrunkardSpawnMode::Random,
             200,
         )),
+        6 => Box::new(MazeBuilder::new(new_depth)),
         _ => unreachable!(),
     }
 }
