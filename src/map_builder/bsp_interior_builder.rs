@@ -14,9 +14,9 @@ pub struct BSPInteriorBuilder {
 }
 
 impl BSPInteriorBuilder {
-    pub fn new(new_depth: i32) -> BSPInteriorBuilder {
+    pub fn new(width: i32, height: i32, new_depth: i32) -> BSPInteriorBuilder {
         BSPInteriorBuilder {
-            map: Map::new(new_depth),
+            map: Map::new(width, height, new_depth),
             starting_position: Position { x: 0, y: 0 },
             history: Vec::new(),
             rects: Vec::new(),

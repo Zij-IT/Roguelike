@@ -1,63 +1,13 @@
 use super::{
-    rex_assets, CombatStats, Equipped, GameLog, InBackpack, Name, Player, RunState, State, Viewshed,
+    camera, constants::colors, rex_assets, CombatStats, Equipped, GameLog, InBackpack, Name,
+    Player, RunState, State, Viewshed,
 };
 use rltk::{Point, Rltk, VirtualKeyCode, RGB};
 use specs::prelude::*;
 
-const BACKGROUND: &str = "#110016";
-const FOREGROUND: &str = "#f3fbf1";
-
 pub fn draw_ingame_ui(ecs: &World, ctx: &mut Rltk) {
-    ctx.draw_box(
-        0,
-        43,
-        79,
-        6,
-        RGB::from_hex(FOREGROUND).unwrap(),
-        RGB::from_hex(BACKGROUND).unwrap(),
-    );
-    let combat_stats = ecs.read_storage::<CombatStats>();
-    let players = ecs.read_storage::<Player>();
-    let mut log = ecs.write_resource::<GameLog>();
-    for (_, stats) in (&players, &combat_stats).join() {
-        let mut y = 44;
-        for entry in log.entries.iter().rev() {
-            if y < 49 {
-                ctx.print(2, y, entry);
-            }
-            y += 1;
-        }
-        if log.entries.len() > 5 {
-            let len = log.entries.len();
-            log.entries.drain(0..len - 5);
-        }
-        let health = format!(" HP {} / {} ", stats.hp, stats.max_hp);
-        ctx.print_color(
-            12,
-            43,
-            RGB::named(rltk::YELLOW),
-            RGB::from_hex(BACKGROUND).unwrap(),
-            &health,
-        );
-        ctx.draw_bar_horizontal(
-            28,
-            43,
-            51,
-            stats.hp,
-            stats.max_hp,
-            RGB::named(rltk::RED),
-            RGB::from_hex(BACKGROUND).unwrap(),
-        );
-        //Map Deets
-        let depth = (*ecs.fetch::<super::Map>()).depth;
-        ctx.print_color(
-            2,
-            43,
-            RGB::named(rltk::YELLOW),
-            RGB::from_hex(BACKGROUND).unwrap(),
-            &format!("Depth: {}", depth),
-        );
-    }
+    let assets = ecs.fetch::<rex_assets::RexAssets>();
+    ctx.render_xp_sprite(&assets.blank_ui, 0, 0);
 }
 
 #[derive(PartialEq, Copy, Clone)]
@@ -103,14 +53,14 @@ pub fn show_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
         base_y - 2,
         31,
         (relevant_ents.len() + 3) as i32,
-        RGB::from_hex(FOREGROUND).unwrap(),
-        RGB::from_hex(BACKGROUND).unwrap(),
+        RGB::from(colors::FOREGROUND),
+        RGB::from(colors::BACKGROUND),
     );
     ctx.print_color(
         base_x + 1,
         base_y - 2,
         RGB::named(rltk::YELLOW),
-        RGB::from_hex(BACKGROUND).unwrap(),
+        RGB::from(colors::BACKGROUND),
         match *current_state {
             RunState::ShowRemoveItem => "Remove What?",
             RunState::ShowDropItem => "Drop What?",
@@ -122,7 +72,7 @@ pub fn show_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
         base_x + 1,
         base_y + relevant_ents.len() as i32 + 1,
         RGB::named(rltk::YELLOW),
-        RGB::from_hex(BACKGROUND).unwrap(),
+        RGB::from(colors::BACKGROUND),
         "ESC to cancel",
     );
 
@@ -132,22 +82,22 @@ pub fn show_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
         ctx.set(
             base_x,
             y,
-            RGB::from_hex(FOREGROUND).unwrap(),
-            RGB::from_hex(BACKGROUND).unwrap(),
+            RGB::from(colors::FOREGROUND),
+            RGB::from(colors::BACKGROUND),
             rltk::to_cp437('('),
         );
         ctx.set(
             base_x + 1,
             y,
             RGB::named(rltk::YELLOW),
-            RGB::from_hex(BACKGROUND).unwrap(),
+            RGB::from(colors::BACKGROUND),
             97 + offset as rltk::FontCharType,
         );
         ctx.set(
             base_x + 2,
             y,
-            RGB::from_hex(FOREGROUND).unwrap(),
-            RGB::from_hex(BACKGROUND).unwrap(),
+            RGB::from(colors::FOREGROUND),
+            RGB::from(colors::BACKGROUND),
             rltk::to_cp437(')'),
         );
         ctx.print(base_x + 4, y, &name.name.to_string());
@@ -174,12 +124,13 @@ pub fn draw_range(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuResult
     let player_ent = gs.ecs.fetch::<Entity>();
     let player_pos = gs.ecs.fetch::<Point>();
     let viewsheds = gs.ecs.read_storage::<Viewshed>();
+    let (min_x, max_x, min_y, max_y) = camera::get_screen_bounds(&gs.ecs, ctx);
 
     ctx.print_color(
         5,
         0,
         RGB::named(rltk::YELLOW),
-        RGB::from_hex(BACKGROUND).unwrap(),
+        RGB::from(colors::BACKGROUND),
         "Select Target: ",
     );
 
@@ -188,8 +139,16 @@ pub fn draw_range(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuResult
         for idx in visible.visible_tiles.iter() {
             let distance = rltk::DistanceAlg::Pythagoras.distance2d(*player_pos, *idx);
             if distance < range as f32 {
-                ctx.set_bg(idx.x, idx.y, RGB::named(rltk::BLUE));
-                available_cells.push(idx);
+                let screen_x = idx.x - min_x;
+                let screen_y = idx.y - min_y;
+                if screen_x > 1
+                    && screen_x < max_x - min_x - 1
+                    && screen_y > 1
+                    && screen_y < max_y - min_y - 1
+                {
+                    ctx.set_bg(screen_x, screen_y, RGB::named(rltk::BLUE));
+                    available_cells.push(idx);
+                }
             }
         }
     } else {
@@ -197,19 +156,20 @@ pub fn draw_range(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuResult
     }
 
     //Draw Cursor
-    let mouse_pos = ctx.mouse_pos();
+    let true_mouse_pos = ctx.mouse_pos();
+    let mouse_pos = { (true_mouse_pos.0 + min_x, true_mouse_pos.1 + min_y) };
     if ctx.left_click {
         if available_cells
             .iter()
             .any(|tile| tile.x == mouse_pos.0 && tile.y == mouse_pos.1)
         {
-            ctx.set_bg(mouse_pos.0, mouse_pos.1, RGB::named(rltk::CYAN));
+            ctx.set_bg(true_mouse_pos.0, true_mouse_pos.1, RGB::named(rltk::CYAN));
             return (
                 ItemMenuResult::Selected,
                 Some(Point::new(mouse_pos.0, mouse_pos.1)),
             );
         } else {
-            ctx.set_bg(mouse_pos.0, mouse_pos.1, RGB::named(rltk::RED));
+            ctx.set_bg(true_mouse_pos.0, true_mouse_pos.1, RGB::named(rltk::RED));
             return (ItemMenuResult::Cancel, None);
         }
     }
@@ -252,9 +212,9 @@ pub fn draw_main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
                 if main_menu_options[(current_selection as usize)] == *option {
                     selected
                 } else {
-                    RGB::from_hex(FOREGROUND).unwrap()
+                    RGB::from(colors::FOREGROUND)
                 },
-                RGB::from_hex(BACKGROUND).unwrap(),
+                RGB::from(colors::BACKGROUND),
                 option,
             );
         }
@@ -305,8 +265,8 @@ pub fn show_game_over(ctx: &mut Rltk) -> GameOverResult {
     for (index, line) in lines.iter().enumerate() {
         ctx.print_color_centered(
             y_base + step * index,
-            RGB::from_hex(FOREGROUND).unwrap(),
-            RGB::from_hex(BACKGROUND).unwrap(),
+            RGB::from(colors::FOREGROUND),
+            RGB::from(colors::BACKGROUND),
             line,
         );
     }

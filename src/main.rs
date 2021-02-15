@@ -4,6 +4,8 @@ use specs::prelude::*;
 use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
 
 //Internal mods and includes
+mod camera;
+mod constants;
 mod ecs;
 mod gui;
 mod map_builder;
@@ -175,7 +177,8 @@ impl State {
         self.mapgen_timer = 0.0;
         self.mapgen_history.clear();
 
-        let mut builder = map_builder::random_builder(new_depth);
+        //TODO width and height should be passed
+        let mut builder = map_builder::random_builder(64, 64, new_depth);
         builder.build_map();
         {
             let mut world = self.ecs.write_resource::<Map>();
@@ -216,23 +219,8 @@ impl GameState for State {
         match next_state {
             RunState::MainMenu(_) => {}
             _ => {
-                draw_map(&self.ecs.fetch::<Map>(), ctx);
-                {
-                    let positions = self.ecs.read_storage::<Position>();
-                    let renderables = self.ecs.read_storage::<Renderable>();
-                    let map = self.ecs.fetch::<Map>();
-                    let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
-                    data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
-                    for (pos, render) in data.iter() {
-                        let idx = map.xy_idx(pos.x, pos.y);
-                        if map.is_tile_status_set(idx, TileStatus::Visible) {
-                            ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
-                        }
-                    }
-                }
-
-                //GUI
                 gui::draw_ingame_ui(&self.ecs, ctx);
+                camera::render_camera(&self.ecs, ctx);
             }
         }
 
@@ -460,7 +448,7 @@ fn main() -> BError {
         gs.ecs,
         SimpleMarkerAllocator::<SerializeMe>::new(),
         rltk::RandomNumberGenerator::new(),
-        Map::new(1),
+        Map::new(1, 1, 1),
         Point::new(0, 0),
         RunState::MapGeneration {},
         particle_system::ParticleBuilder::new(),

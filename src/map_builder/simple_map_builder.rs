@@ -10,9 +10,9 @@ pub struct SimpleMapBuilder {
 }
 
 impl SimpleMapBuilder {
-    pub fn new(new_depth: i32) -> SimpleMapBuilder {
+    pub fn new(width: i32, height: i32, depth: i32) -> SimpleMapBuilder {
         SimpleMapBuilder {
-            map: Map::new(new_depth),
+            map: Map::new(width, height, depth),
             starting_position: Position { x: 0, y: 0 },
             rooms: Vec::new(),
             history: Vec::new(),

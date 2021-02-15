@@ -20,9 +20,15 @@ pub struct DrunkardsBuilder {
 }
 
 impl DrunkardsBuilder {
-    pub fn new(new_depth: i32, spawn_mode: DrunkardSpawnMode, lifetime: i32) -> DrunkardsBuilder {
+    pub fn new(
+        width: i32,
+        height: i32,
+        new_depth: i32,
+        spawn_mode: DrunkardSpawnMode,
+        lifetime: i32,
+    ) -> DrunkardsBuilder {
         DrunkardsBuilder {
-            map: Map::new(new_depth),
+            map: Map::new(width, height, new_depth),
             starting_position: Position { x: 0, y: 0 },
             history: Vec::new(),
             noise_areas: HashMap::new(),

@@ -31,19 +31,21 @@ pub trait MapBuilder {
     fn take_snapshot(&mut self);
 }
 
-pub fn random_builder(new_depth: i32) -> Box<dyn MapBuilder> {
+pub fn random_builder(width: i32, height: i32, depth: i32) -> Box<dyn MapBuilder> {
     let mut rng = RandomNumberGenerator::new();
     match rng.roll_dice(1, 6) {
-        1 => Box::new(SimpleMapBuilder::new(new_depth)),
-        2 => Box::new(BSPMapBuilder::new(new_depth)),
-        3 => Box::new(BSPInteriorBuilder::new(new_depth)),
-        4 => Box::new(CellularAutomataBuilder::new(new_depth)),
+        1 => Box::new(SimpleMapBuilder::new(width, height, depth)),
+        2 => Box::new(BSPMapBuilder::new(width, height, depth)),
+        3 => Box::new(BSPInteriorBuilder::new(width, height, depth)),
+        4 => Box::new(CellularAutomataBuilder::new(width, height, depth)),
         5 => Box::new(DrunkardsBuilder::new(
-            new_depth,
+            width,
+            height,
+            depth,
             DrunkardSpawnMode::Random,
             200,
         )),
-        6 => Box::new(MazeBuilder::new(new_depth)),
+        6 => Box::new(MazeBuilder::new(width, height, depth)),
         _ => unreachable!(),
     }
 }

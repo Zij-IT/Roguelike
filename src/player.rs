@@ -82,8 +82,8 @@ fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
 
         //If not blocked, moves the player there
         if !map.is_tile_status_set(destination_idx, TileStatus::Blocked) {
-            pos.x = std::cmp::min(79, std::cmp::max(0, pos.x + delta_x));
-            pos.y = std::cmp::min(49, std::cmp::max(0, pos.y + delta_y));
+            pos.x = std::cmp::min(map.width - 1, std::cmp::max(0, pos.x + delta_x));
+            pos.y = std::cmp::min(map.height - 1, std::cmp::max(0, pos.y + delta_y));
             let mut ppos = ecs.write_resource::<Point>();
             ppos.x = pos.x;
             ppos.y = pos.y;

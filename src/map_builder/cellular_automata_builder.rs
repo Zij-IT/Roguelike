@@ -14,9 +14,9 @@ pub struct CellularAutomataBuilder {
 }
 
 impl CellularAutomataBuilder {
-    pub fn new(new_depth: i32) -> CellularAutomataBuilder {
+    pub fn new(width: i32, height: i32, new_depth: i32) -> CellularAutomataBuilder {
         CellularAutomataBuilder {
-            map: Map::new(new_depth),
+            map: Map::new(width, height, new_depth),
             starting_position: Position { x: 0, y: 0 },
             history: Vec::new(),
             noise_areas: HashMap::new(),

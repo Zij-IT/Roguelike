@@ -2,9 +2,6 @@ use rltk::{Algorithm2D, BaseMap, Point, Rltk, RGB};
 use serde::{Deserialize, Serialize};
 use specs::prelude::*;
 
-pub const MAP_HEIGHT: i32 = 43;
-pub const MAP_WIDTH: i32 = 80;
-
 //Tile Statuses
 pub enum TileStatus {
     Revealed = 0,
@@ -33,14 +30,14 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn new(new_depth: i32) -> Map {
+    pub fn new(width: i32, height: i32, depth: i32) -> Map {
         Map {
-            tiles: vec![TileType::Wall; (MAP_WIDTH * MAP_HEIGHT) as usize],
-            tile_status: vec![0; (MAP_WIDTH * MAP_HEIGHT) as usize],
-            tile_content: vec![Vec::new(); (MAP_WIDTH * MAP_HEIGHT) as usize],
-            width: MAP_WIDTH,
-            height: MAP_HEIGHT,
-            depth: new_depth,
+            tiles: vec![TileType::Wall; (width * height) as usize],
+            tile_status: vec![0; (width * height) as usize],
+            tile_content: vec![Vec::new(); (width * height) as usize],
+            width,
+            height,
+            depth,
         }
     }
 
