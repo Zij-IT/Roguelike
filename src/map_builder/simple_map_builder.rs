@@ -18,8 +18,11 @@ impl SimpleMapBuilder {
             history: Vec::new(),
         }
     }
+}
 
-    fn rooms_and_corridors(&mut self) {
+impl MapBuilder for SimpleMapBuilder {
+    fn build_map(&mut self) {
+        assert!(i32::checked_mul(self.map.width, self.map.height) != None);
         const MAX_ROOMS: i32 = 30;
         const MIN_SIZE: i32 = 6;
         const MAX_SIZE: i32 = 10;
@@ -61,12 +64,6 @@ impl SimpleMapBuilder {
             x: start_pos.0,
             y: start_pos.1,
         };
-    }
-}
-
-impl MapBuilder for SimpleMapBuilder {
-    fn build_map(&mut self) {
-        self.rooms_and_corridors();
     }
 
     fn spawn_entities(&mut self, ecs: &mut World) {

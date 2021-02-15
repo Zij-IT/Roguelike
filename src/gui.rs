@@ -179,7 +179,7 @@ pub fn draw_range(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuResult
         5,
         0,
         RGB::named(rltk::YELLOW),
-        RGB::from_hex(FOREGROUND).unwrap(),
+        RGB::from_hex(BACKGROUND).unwrap(),
         "Select Target: ",
     );
 
@@ -212,6 +212,10 @@ pub fn draw_range(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuResult
             ctx.set_bg(mouse_pos.0, mouse_pos.1, RGB::named(rltk::RED));
             return (ItemMenuResult::Cancel, None);
         }
+    }
+    match ctx.key {
+        Some(VirtualKeyCode::Escape) => return (ItemMenuResult::Cancel, None),
+        _ => {}
     }
 
     (ItemMenuResult::NoResponse, None)

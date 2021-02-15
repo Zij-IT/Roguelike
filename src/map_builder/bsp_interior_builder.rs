@@ -78,6 +78,8 @@ impl BSPInteriorBuilder {
 
 impl MapBuilder for BSPInteriorBuilder {
     fn build_map(&mut self) {
+        assert!(i32::checked_mul(self.map.width, self.map.height) != None);
+
         let mut rng = RandomNumberGenerator::new();
         self.rects.clear();
         //x, y, w, h
