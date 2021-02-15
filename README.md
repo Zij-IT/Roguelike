@@ -8,7 +8,7 @@ The library I am using for the heavy-lifting is the [bracket library](https://gi
 
 # State of Game
 
-Game is knowingly NOT in a playable state. Upon clicking new game, the game will create a new map and visualize the map generation. This is expected, and not a bug!
+Game is back to being in a playable, non-testing state. Still not the most interesting of games, but its mine.
 
 # Current Goals
 - [ ] Feedback (animations)
