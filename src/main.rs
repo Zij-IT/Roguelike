@@ -391,12 +391,22 @@ pub struct GameLog {
     pub entries: Vec<String>,
 }
 
+rltk::embedded_resource!(GAME_FONT, "../resources/cp437_8x8.png");
+
 fn main() -> BError {
-    let context = RltkBuilder::simple(80, 60)
-        .unwrap()
-        .with_title("Bashing Bytes")
-        .with_fullscreen(true)
-        .build()?;
+    rltk::link_resource!(GAME_FONT, "/resources/cp437_8x8.png");
+    let context = {
+        let mut context = RltkBuilder::simple(80, 60)
+            .unwrap()
+            .with_title("Bashing Bytes")
+            .with_font("cp437_8x8.png", 8, 8)
+            .with_fullscreen(true)
+            .build()?;
+
+        context.set_active_font(1, true);
+
+        context
+    };
 
     //Construct world
     let mut gs = State {
