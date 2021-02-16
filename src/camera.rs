@@ -2,36 +2,24 @@ use crate::{constants::colors, Map, Position, Renderable, TileStatus, TileType};
 use rltk::{Point, Rltk, RGB};
 use specs::prelude::*;
 
-const SHOW_BOUNDARIES: bool = false;
+const EDGE_BUFFER: usize = 2;
 
 pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
     let map = ecs.fetch::<Map>();
     let map_width = map.width - 1;
     let map_height = map.height - 1;
-    let (min_x, max_x, min_y, max_y) = get_screen_bounds(ecs, ctx);
+    let (min_x, max_x, min_y, max_y) = get_screen_bounds(ecs);
 
-    let mut y = 0;
-    for ty in min_y..max_y {
-        let mut x = 0;
-        for tx in min_x..max_x {
+    for (y, ty) in (min_y..max_y).enumerate().skip(EDGE_BUFFER) {
+        for (x, tx) in (min_x..max_x).enumerate().skip(EDGE_BUFFER) {
             if tx > 0 && tx < map_width && ty > 0 && ty < map_height {
                 let idx = map.xy_idx(tx, ty);
                 if map.is_tile_status_set(idx, TileStatus::Revealed) {
                     let (glyph, fg, bg) = get_tile_glyph(idx, &*map);
                     ctx.set(x, y, fg, bg, glyph);
                 }
-            } else if SHOW_BOUNDARIES {
-                ctx.set(
-                    x,
-                    y,
-                    RGB::named(rltk::GRAY),
-                    RGB::named(rltk::BLACK),
-                    rltk::to_cp437('·'),
-                );
             }
-            x += 1;
         }
-        y += 1;
     }
 
     let positions = ecs.read_storage::<Position>();
@@ -46,8 +34,9 @@ pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
         if map.is_tile_status_set(idx, TileStatus::Visible) {
             let offset_x = pos.x - min_x;
             let offset_y = pos.y - min_y;
-
-            ctx.set(offset_x, offset_y, render.fg, render.bg, render.glyph);
+            if offset_x >= EDGE_BUFFER as i32 && offset_y >= EDGE_BUFFER as i32 {
+                ctx.set(offset_x, offset_y, render.fg, render.bg, render.glyph);
+            }
         }
     }
 }
@@ -55,7 +44,14 @@ pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
 fn get_tile_glyph(idx: usize, map: &Map) -> (rltk::FontCharType, RGB, RGB) {
     let bg = colors::BACKGROUND;
     let (glyph, fg) = match map.tiles[idx] {
-        TileType::Wall => (35, colors::WALL),
+        TileType::Wall => (
+            35,
+            if map.is_tile_status_set(idx, TileStatus::Visible) {
+                colors::WALL_VISIBLE
+            } else {
+                colors::WALL_REVEALED
+            },
+        ),
         TileType::Floor => (46, colors::FLOOR),
         TileType::StairsDown => (174, colors::STAIRS),
     };
@@ -63,9 +59,9 @@ fn get_tile_glyph(idx: usize, map: &Map) -> (rltk::FontCharType, RGB, RGB) {
     (glyph, RGB::from(fg), RGB::from(bg))
 }
 
-pub fn get_screen_bounds(ecs: &World, ctx: &mut Rltk) -> (i32, i32, i32, i32) {
+pub fn get_screen_bounds(ecs: &World) -> (i32, i32, i32, i32) {
     let player_pos = ecs.fetch::<Point>();
-    let (x_chars, y_chars) = (56, 42);
+    let (x_chars, y_chars) = (57, 43); //Set by UI Image
 
     let center_x = (x_chars / 2) as i32;
     let center_y = (y_chars / 2) as i32;

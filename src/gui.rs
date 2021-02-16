@@ -1,6 +1,5 @@
 use super::{
-    camera, constants::colors, rex_assets, CombatStats, Equipped, GameLog, InBackpack, Name,
-    Player, RunState, State, Viewshed,
+    camera, constants::colors, rex_assets, Equipped, InBackpack, Name, RunState, State, Viewshed,
 };
 use rltk::{Point, Rltk, VirtualKeyCode, RGB};
 use specs::prelude::*;
@@ -124,7 +123,7 @@ pub fn draw_range(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuResult
     let player_ent = gs.ecs.fetch::<Entity>();
     let player_pos = gs.ecs.fetch::<Point>();
     let viewsheds = gs.ecs.read_storage::<Viewshed>();
-    let (min_x, max_x, min_y, max_y) = camera::get_screen_bounds(&gs.ecs, ctx);
+    let (min_x, max_x, min_y, max_y) = camera::get_screen_bounds(&gs.ecs);
 
     ctx.print_color(
         5,
@@ -173,9 +172,8 @@ pub fn draw_range(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuResult
             return (ItemMenuResult::Cancel, None);
         }
     }
-    match ctx.key {
-        Some(VirtualKeyCode::Escape) => return (ItemMenuResult::Cancel, None),
-        _ => {}
+    if let Some(VirtualKeyCode::Escape) = ctx.key {
+        return (ItemMenuResult::Cancel, None);
     }
 
     (ItemMenuResult::NoResponse, None)
