@@ -1,4 +1,4 @@
-use super::{common::EDGE_BUFFER, Map, MapBuilder, Position, Rect, TileStatus, TileType};
+use super::{common::EDGE_BUFFER, Map, MapBuilder, Position, Rect, TileType};
 use crate::spawner::populate_room;
 use rltk::RandomNumberGenerator;
 use specs::World;
@@ -8,7 +8,6 @@ const MIN_ROOM_SIZE: i32 = 8;
 pub struct BSPInteriorBuilder {
     map: Map,
     starting_position: Position,
-    history: Vec<Map>,
     rects: Vec<Rect>,
     rooms: Vec<Rect>,
 }
@@ -18,7 +17,6 @@ impl BSPInteriorBuilder {
         BSPInteriorBuilder {
             map: Map::new(width, height, new_depth),
             starting_position: Position { x: 0, y: 0 },
-            history: Vec::new(),
             rects: Vec::new(),
             rooms: Vec::new(),
         }
@@ -82,7 +80,7 @@ impl MapBuilder for BSPInteriorBuilder {
 
         let mut rng = RandomNumberGenerator::new();
         self.rects.clear();
-        //x, y, w, h
+
         let first_room = Rect::new(
             EDGE_BUFFER,
             EDGE_BUFFER,
@@ -100,10 +98,8 @@ impl MapBuilder for BSPInteriorBuilder {
                     self.map.tiles[idx] = TileType::Floor;
                 }
             }
-            self.take_snapshot();
         }
 
-        //Get some doors / hallways in
         for i in 0..self.rooms.len() - 1 {
             let room = self.rooms[i];
             let next_room = self.rooms[i + 1];
@@ -114,14 +110,12 @@ impl MapBuilder for BSPInteriorBuilder {
             let end_y =
                 next_room.y1 + (rng.roll_dice(1, i32::abs(next_room.y1 - next_room.y2)) - 1);
             self.draw_corridor(start_x, start_y, end_x, end_y);
-            self.take_snapshot();
         }
 
         //Get stairs in!
         let stairs = self.rooms[self.rooms.len() - 1].center();
         let stairs_idx = self.map.xy_idx(stairs.0, stairs.1);
         self.map.tiles[stairs_idx] = TileType::StairsDown;
-        self.take_snapshot();
 
         // Set player start
         let start = self.rooms[0].center();
@@ -137,25 +131,11 @@ impl MapBuilder for BSPInteriorBuilder {
         }
     }
 
-    fn take_snapshot(&mut self) {
-        if crate::SHOW_MAPGEN {
-            let mut snapshot = self.get_map();
-            for tile in 0..snapshot.tile_status.len() {
-                snapshot.set_tile_status(tile, TileStatus::Revealed);
-            }
-            self.history.push(snapshot);
-        }
-    }
-
     fn get_map(&self) -> Map {
         self.map.clone()
     }
 
     fn get_starting_position(&self) -> Position {
         self.starting_position.clone()
-    }
-
-    fn get_snapshot_history(&self) -> Vec<Map> {
-        self.history.clone()
     }
 }

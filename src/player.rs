@@ -108,7 +108,7 @@ fn get_item(ecs: &mut World) {
     }
 
     match target_item {
-        None => logs.entries.push("There is nothing to pick up".to_string()),
+        None => logs.push("There is nothing to pick up"),
         Some(item) => {
             let mut pickup = ecs.write_storage::<WantsToPickupItem>();
             pickup
@@ -132,8 +132,7 @@ fn try_next_level(ecs: &mut World) -> bool {
         true
     } else {
         let mut logs = ecs.fetch_mut::<GameLog>();
-        logs.entries
-            .push("There is no way down from here.".to_string());
+        logs.push("There is no way down from here.");
         false
     }
 }

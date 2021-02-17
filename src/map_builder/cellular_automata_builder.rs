@@ -9,7 +9,6 @@ const MAX_ITERATIONS: usize = 15;
 pub struct CellularAutomataBuilder {
     map: Map,
     starting_position: Position,
-    history: Vec<Map>,
     noise_areas: HashMap<i32, Vec<(i32, i32)>>,
 }
 
@@ -18,7 +17,6 @@ impl CellularAutomataBuilder {
         CellularAutomataBuilder {
             map: Map::new(width, height, new_depth),
             starting_position: Position { x: 0, y: 0 },
-            history: Vec::new(),
             noise_areas: HashMap::new(),
         }
     }
@@ -40,7 +38,6 @@ impl MapBuilder for CellularAutomataBuilder {
                 }
             }
         }
-        self.take_snapshot();
 
         let mut new_tiles = self.map.tiles.clone();
         for _ in 0..MAX_ITERATIONS {
@@ -70,7 +67,6 @@ impl MapBuilder for CellularAutomataBuilder {
                 }
             }
             self.map.tiles = new_tiles.clone();
-            self.take_snapshot();
         }
 
         //Find start tile. Go left up until a floor tile is found. Go up after x = 0
@@ -87,7 +83,6 @@ impl MapBuilder for CellularAutomataBuilder {
         };
 
         cull_and_set_exit(&mut self.map, start_idx);
-        self.take_snapshot();
 
         //Build noise map for use in spawning entiites
         self.noise_areas = gen_voronoi_regions(&self.map, &mut rng);
@@ -99,26 +94,12 @@ impl MapBuilder for CellularAutomataBuilder {
         }
     }
 
-    fn take_snapshot(&mut self) {
-        if crate::SHOW_MAPGEN {
-            let mut snapshot = self.get_map();
-            for tile in 0..snapshot.tile_status.len() {
-                snapshot.set_tile_status(tile, TileStatus::Revealed);
-            }
-            self.history.push(snapshot);
-        }
-    }
-
     fn get_map(&self) -> Map {
         self.map.clone()
     }
 
     fn get_starting_position(&self) -> Position {
         self.starting_position.clone()
-    }
-
-    fn get_snapshot_history(&self) -> Vec<Map> {
-        self.history.clone()
     }
 }
 

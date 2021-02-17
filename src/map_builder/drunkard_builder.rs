@@ -1,5 +1,5 @@
-use super::{common::*, Map, MapBuilder, TileStatus, TileType};
-use crate::{spawner, Position, SHOW_MAPGEN};
+use super::{common::*, Map, MapBuilder, TileType};
+use crate::{spawner, Position};
 use rltk::RandomNumberGenerator;
 use specs::World;
 use std::collections::HashMap;
@@ -13,7 +13,6 @@ pub enum DrunkardSpawnMode {
 pub struct DrunkardsBuilder {
     map: Map,
     starting_position: Position,
-    history: Vec<Map>,
     noise_areas: HashMap<i32, Vec<(i32, i32)>>,
     spawn_mode: DrunkardSpawnMode,
     lifetime: i32,
@@ -30,7 +29,6 @@ impl DrunkardsBuilder {
         DrunkardsBuilder {
             map: Map::new(width, height, new_depth),
             starting_position: Position { x: 0, y: 0 },
-            history: Vec::new(),
             noise_areas: HashMap::new(),
             spawn_mode,
             lifetime,
@@ -47,23 +45,9 @@ impl MapBuilder for DrunkardsBuilder {
         self.starting_position.clone()
     }
 
-    fn get_snapshot_history(&self) -> Vec<Map> {
-        self.history.clone()
-    }
-
     fn spawn_entities(&mut self, ecs: &mut World) {
         for area in self.noise_areas.iter() {
             spawner::spawn_region(ecs, area.1, self.map.depth);
-        }
-    }
-
-    fn take_snapshot(&mut self) {
-        if SHOW_MAPGEN {
-            let mut snapshot = self.get_map();
-            for tile in 0..snapshot.tile_status.len() {
-                snapshot.set_tile_status(tile, TileStatus::Revealed);
-            }
-            self.history.push(snapshot);
         }
     }
 
@@ -143,7 +127,6 @@ impl MapBuilder for DrunkardsBuilder {
         }
 
         cull_and_set_exit(&mut self.map, start_idx);
-        self.take_snapshot();
         self.noise_areas = gen_voronoi_regions(&self.map, &mut rng);
     }
 }

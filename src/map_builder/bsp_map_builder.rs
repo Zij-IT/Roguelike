@@ -8,7 +8,6 @@ const MAX_ATTEMPTS: usize = 240;
 pub struct BSPMapBuilder {
     map: Map,
     starting_position: Position,
-    history: Vec<Map>,
     rects: Vec<Rect>,
     rooms: Vec<Rect>,
 }
@@ -18,7 +17,6 @@ impl BSPMapBuilder {
         BSPMapBuilder {
             map: Map::new(width, height, new_depth),
             starting_position: Position { x: 0, y: 0 },
-            history: Vec::new(),
             rects: Vec::new(),
             rooms: Vec::new(),
         }
@@ -47,7 +45,6 @@ impl MapBuilder for BSPMapBuilder {
                 apply_room_to_map(&mut self.map, &candidate);
                 self.rooms.push(candidate);
                 self.add_subrects(rect);
-                self.take_snapshot();
             }
         }
 
@@ -65,14 +62,12 @@ impl MapBuilder for BSPMapBuilder {
             let end_y =
                 next_room.y1 + (rng.roll_dice(1, i32::abs(next_room.y1 - next_room.y2)) - 1);
             self.draw_corridor(start_x, start_y, end_x, end_y);
-            self.take_snapshot();
         }
 
         //Get stairs in!
         let stairs = self.rooms[self.rooms.len() - 1].center();
         let stairs_idx = self.map.xy_idx(stairs.0, stairs.1);
         self.map.tiles[stairs_idx] = TileType::StairsDown;
-        self.take_snapshot();
 
         // Set player start
         let start = self.rooms[0].center();
@@ -88,26 +83,12 @@ impl MapBuilder for BSPMapBuilder {
         }
     }
 
-    fn take_snapshot(&mut self) {
-        if crate::SHOW_MAPGEN {
-            let mut snapshot = self.get_map();
-            for tile in 0..snapshot.tile_status.len() {
-                snapshot.set_tile_status(tile, TileStatus::Revealed);
-            }
-            self.history.push(snapshot);
-        }
-    }
-
     fn get_map(&self) -> Map {
         self.map.clone()
     }
 
     fn get_starting_position(&self) -> Position {
         self.starting_position.clone()
-    }
-
-    fn get_snapshot_history(&self) -> Vec<Map> {
-        self.history.clone()
     }
 }
 

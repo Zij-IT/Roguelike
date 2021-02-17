@@ -1,4 +1,4 @@
-use rltk::{Algorithm2D, BaseMap, Point, Rltk, RGB};
+use rltk::{Algorithm2D, BaseMap, Point};
 use serde::{Deserialize, Serialize};
 use specs::prelude::*;
 
@@ -130,27 +130,5 @@ impl BaseMap for Map {
         };
 
         exits
-    }
-}
-
-///Prints out the map to the rltk::Console
-pub fn draw_map(map: &Map, ctx: &mut Rltk) {
-    for (pos, tile) in map.tiles.iter().enumerate() {
-        if map.is_tile_status_set(pos, TileStatus::Revealed) {
-            let x = pos as i32 % map.width;
-            let y = pos as i32 / map.width;
-
-            let (glyph, mut fg) = match tile {
-                TileType::Wall => (35, RGB::from_f32(0.0, 1.0, 0.0)),
-                TileType::Floor => (46, RGB::from_f32(0., 0.25, 0.)),
-                TileType::StairsDown => (174, RGB::from_f32(0., 1.0, 1.0)),
-            };
-
-            if !map.is_tile_status_set(pos, TileStatus::Visible) {
-                fg = fg.to_greyscale();
-            }
-
-            ctx.set(x, y, fg, RGB::from_f32(0., 0., 0.), glyph);
-        }
     }
 }

@@ -36,7 +36,7 @@ impl DamageSystem {
                         None => {
                             dead.push(entity);
                             if let Some(name) = names.get(entity) {
-                                log.entries.push(format!("{} is dead", &name.name));
+                                log.push(format!("{} is dead", &name.name));
                             }
                         }
                         Some(_) => {

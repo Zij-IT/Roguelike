@@ -7,6 +7,7 @@ use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
 mod camera;
 mod constants;
 mod ecs;
+mod gamelog;
 mod gui;
 mod map_builder;
 mod player;
@@ -16,12 +17,10 @@ mod save_load_util;
 mod spawner;
 
 use ecs::*;
+use gamelog::GameLog;
 use map_builder::*;
 use player::*;
 use random_table::*;
-
-//Constants
-const SHOW_MAPGEN: bool = false;
 
 //Macros
 ///Given a specs::World, and a list of components, it registers all components in the world
@@ -47,7 +46,6 @@ pub enum RunState {
     AwaitingInput,
     GameOver,
     MainMenu(gui::MainMenuSelection),
-    MapGeneration,
     MonsterTurn,
     NextLevel,
     PlayerTurn,
@@ -62,10 +60,6 @@ pub enum RunState {
 //Main gamestate
 pub struct State {
     pub ecs: World,
-    mapgen_next_state: Option<RunState>,
-    mapgen_history: Vec<Map>,
-    mapgen_index: usize,
-    mapgen_timer: f32,
 }
 
 impl State {
@@ -134,6 +128,7 @@ impl State {
                 .delete_entity(target)
                 .expect("Unable to delete entity during level transition");
         }
+        self.ecs.maintain();
 
         //Build new map and place player
         let current_depth = self.ecs.fetch::<Map>().depth;
@@ -142,8 +137,7 @@ impl State {
         //Notify player and heal player
         let player_ent = self.ecs.fetch::<Entity>();
         let mut logs = self.ecs.fetch_mut::<GameLog>();
-        logs.entries
-            .push("You descend to the next level.".to_string());
+        logs.push("You descend to the next level.");
         let mut all_stats = self.ecs.write_storage::<CombatStats>();
         if let Some(player_stats) = all_stats.get_mut(*player_ent) {
             player_stats.hp = i32::max(player_stats.hp, player_stats.max_hp / 2);
@@ -157,8 +151,8 @@ impl State {
 
         //Add starting message
         let mut logs = self.ecs.write_resource::<GameLog>();
-        logs.entries.clear();
-        logs.entries.push("Welcome to my Roguelike!".to_string());
+        logs.clear();
+        logs.push("Welcome to my Roguelike!");
         std::mem::drop(logs);
 
         //Create new player resource
@@ -172,11 +166,6 @@ impl State {
 
     ///Generates a new level using random_builder with the specified depth
     fn generate_world_map(&mut self, new_depth: i32) {
-        //Visualizing mapgen
-        self.mapgen_index = 0;
-        self.mapgen_timer = 0.0;
-        self.mapgen_history.clear();
-
         //TODO width and height should be passed
         let mut builder = map_builder::random_builder(64, 64, new_depth);
         builder.build_map();
@@ -184,7 +173,6 @@ impl State {
             let mut world = self.ecs.write_resource::<Map>();
             *world = builder.get_map();
         }
-        self.mapgen_history = builder.get_snapshot_history();
 
         builder.spawn_entities(&mut self.ecs);
 
@@ -336,9 +324,6 @@ impl GameState for State {
                     gui::MainMenuSelection::NewGame => {
                         self.game_over_cleanup();
                         next_state = RunState::PreRun;
-                        if SHOW_MAPGEN {
-                            next_state = RunState::MapGeneration;
-                        }
                     }
                     gui::MainMenuSelection::LoadGame => {
                         if save_load_util::does_save_exist() {
@@ -362,33 +347,12 @@ impl GameState for State {
                     }
                 }
             }
-            RunState::MapGeneration => {
-                if !SHOW_MAPGEN {
-                    next_state = self.mapgen_next_state.unwrap();
-                } else {
-                    ctx.cls();
-                    draw_map(&self.mapgen_history[self.mapgen_index], ctx);
-
-                    self.mapgen_timer += ctx.frame_time_ms;
-                    if self.mapgen_timer > 200.0 {
-                        self.mapgen_timer = 0.0;
-                        self.mapgen_index += 1;
-                        if self.mapgen_index >= self.mapgen_history.len() {
-                            next_state = self.mapgen_next_state.unwrap();
-                        }
-                    }
-                }
-            }
         }
 
         //Replace RunState with the new one
         self.ecs.insert::<RunState>(next_state);
         DamageSystem::delete_the_dead(&mut self.ecs);
     }
-}
-
-pub struct GameLog {
-    pub entries: Vec<String>,
 }
 
 rltk::embedded_resource!(GAME_FONT, "../resources/cp437_8x8.png");
@@ -409,13 +373,7 @@ fn main() -> BError {
     };
 
     //Construct world
-    let mut gs = State {
-        ecs: World::new(),
-        mapgen_next_state: Some(RunState::MainMenu(gui::MainMenuSelection::NewGame)),
-        mapgen_history: Vec::new(),
-        mapgen_index: 0,
-        mapgen_timer: 0.0,
-    };
+    let mut gs = State { ecs: World::new() };
 
     //Register the components
     //gs.ecs must be first, otherwise irrelevant
@@ -460,12 +418,11 @@ fn main() -> BError {
         rltk::RandomNumberGenerator::new(),
         Map::new(1, 1, 1),
         Point::new(0, 0),
-        RunState::MapGeneration {},
+        RunState::MainMenu(gui::MainMenuSelection::NewGame),
         particle_system::ParticleBuilder::new(),
         rex_assets::RexAssets::new(),
-        GameLog {
-            entries: vec!["Welcome to my roguelike".to_string()],
-        },
+        GameLog::default(),
+        ,
     );
 
     //Unable to include this statement in the above batch due to the borrow checker

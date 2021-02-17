@@ -1,5 +1,5 @@
-use super::{common::*, Map, MapBuilder, TileStatus, TileType};
-use crate::{spawner, Position, SHOW_MAPGEN};
+use super::{common::*, Map, MapBuilder, TileType};
+use crate::{spawner, Position};
 use rltk::RandomNumberGenerator;
 use specs::World;
 use std::collections::HashMap;
@@ -7,7 +7,6 @@ use std::collections::HashMap;
 pub struct MazeBuilder {
     map: Map,
     starting_position: Position,
-    history: Vec<Map>,
     noise_areas: HashMap<i32, Vec<(i32, i32)>>,
 }
 
@@ -16,7 +15,6 @@ impl MazeBuilder {
         MazeBuilder {
             map: Map::new(width, height, new_depth),
             starting_position: Position { x: 0, y: 0 },
-            history: Vec::new(),
             noise_areas: HashMap::new(),
         }
     }
@@ -52,26 +50,12 @@ impl MapBuilder for MazeBuilder {
         }
     }
 
-    fn take_snapshot(&mut self) {
-        if SHOW_MAPGEN {
-            let mut snapshot = self.get_map();
-            for tile in 0..snapshot.tile_status.len() {
-                snapshot.set_tile_status(tile, TileStatus::Revealed);
-            }
-            self.history.push(snapshot);
-        }
-    }
-
     fn get_map(&self) -> Map {
         self.map.clone()
     }
 
     fn get_starting_position(&self) -> Position {
         self.starting_position.clone()
-    }
-
-    fn get_snapshot_history(&self) -> Vec<Map> {
-        self.history.clone()
     }
 }
 enum CellStatus {
