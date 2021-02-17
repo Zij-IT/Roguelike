@@ -410,7 +410,7 @@ fn main() -> BError {
     );
 
     //gs.ecs must be first, otherwise follow the dependencies
-    //DEPENDANCIES:
+    //DEPENDENCIES:
     //player -> SimpleMarkerAllocator
     insert_all!(
         gs.ecs,
