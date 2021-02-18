@@ -324,13 +324,9 @@ impl GameState for EcsWorld {
                 },
             },
             RunState::GameOver => {
-                let result = gui::show_game_over(ctx);
-                match result {
-                    gui::GameOverResult::NoSelection => {}
-                    gui::GameOverResult::QuitToMenu => {
-                        self.game_over_cleanup();
-                        next_state = RunState::MainMenu(gui::MainMenuSelection::NewGame);
-                    }
+                if gui::show_game_over(ctx) == gui::GameOverResult::QuitToMenu {
+                    self.game_over_cleanup();
+                    next_state = RunState::MainMenu(gui::MainMenuSelection::NewGame);
                 }
             }
         }
