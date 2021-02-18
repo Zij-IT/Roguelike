@@ -1,11 +1,12 @@
 use super::{
-    camera, constants::colors, rex_assets, EcsWorld, Equipped, InBackpack, Name, RunState, Viewshed,
+    camera, constants::colors, rex_assets, EcsWorld, Equipped, InBackpack, Name, RunState, Viewshed, constants::consoles
 };
-use rltk::{Point, Rltk, VirtualKeyCode, RGB};
+use rltk::{Point, Rltk, VirtualKeyCode, RGB, DrawBatch, xp_to_console};
 use specs::prelude::*;
 
 pub fn draw_hud(ecs: &World, ctx: &mut Rltk) {
     let assets = ecs.fetch::<rex_assets::RexAssets>();
+    ctx.set_active_console(consoles::HUD_CONSOLE);
     ctx.render_xp_sprite(&assets.blank_ui, 0, 0);
 }
 
@@ -42,6 +43,9 @@ pub fn show_inventory(gs: &mut EcsWorld, ctx: &mut Rltk) -> (ItemMenuResult, Opt
                 .collect::<Vec<_>>()
         }
     };
+
+    //
+    ctx.set_active_console(consoles::CHAR_CONSOLE);
 
     //Base locations
     let base_x = 17;
@@ -199,6 +203,7 @@ pub enum MainMenuResult {
 
 pub fn draw_main_menu(gs: &mut EcsWorld, ctx: &mut Rltk) -> MainMenuResult {
     let assets = gs.world.fetch::<rex_assets::RexAssets>();
+    ctx.set_active_console(consoles::HUD_CONSOLE);
     ctx.render_xp_sprite(&assets.title_screen, 0, 0);
 
     if let RunState::MainMenu(current_selection) = *(gs.world.fetch::<RunState>()) {

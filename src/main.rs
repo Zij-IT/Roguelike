@@ -21,6 +21,7 @@ use game_log::GameLog;
 use map_builder::*;
 use player::*;
 use random_table::*;
+use constants::consoles;
 
 //Macros
 ///Given a specs::World, and a list of components, it registers all components in the world
@@ -174,7 +175,13 @@ impl EcsWorld {
 
 impl GameState for EcsWorld {
     fn tick(&mut self, ctx: &mut Rltk) {
-        ctx.cls();
+
+        //Clear all consoles
+        for i in 0..consoles::NUM_OF_CONSOLES {
+            ctx.set_active_console(i);
+            ctx.cls();
+        }
+
         ecs::cull_dead_particles(&mut self.world, ctx.frame_time_ms);
         let mut next_state = *self.world.fetch::<RunState>();
 
@@ -331,6 +338,7 @@ impl GameState for EcsWorld {
         //Replace RunState with the new one
         self.world.insert::<RunState>(next_state);
         ecs::cull_dead_characters(&mut self.world);
+        render_draw_buffer(ctx).expect("Error rendering draw buffer");
     }
 }
 

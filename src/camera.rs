@@ -1,4 +1,4 @@
-use crate::{constants::colors, Map, Position, Renderable, TileStatus, TileType};
+use crate::{constants::colors, constants::consoles, Map, Position, Renderable, TileStatus, TileType};
 use rltk::{render_draw_buffer, ColorPair, DrawBatch, Point, Rltk};
 use specs::prelude::*;
 
@@ -10,9 +10,7 @@ pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
     let map_height = map.height - 1;
     let (min_x, max_x, min_y, max_y) = get_screen_bounds(ecs);
 
-    let mut draw_batch = DrawBatch::new();
-    draw_batch.target(0);
-    draw_batch.cls();
+    ctx.set_active_console(consoles::MAP_CONSOLE);
 
     for (ty, y) in (min_y..max_y).zip(0..).skip(EDGE_BUFFER) {
         for (tx, x) in (min_x..max_x).zip(0..).skip(EDGE_BUFFER) {
@@ -20,7 +18,7 @@ pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
                 let idx = map.xy_idx(tx, ty);
                 if map.is_tile_status_set(idx, TileStatus::Revealed) {
                     let (glyph, color_pair) = get_tile_glyph(idx, &*map);
-                    draw_batch.set(Point::from((x, y)), color_pair, glyph);
+                    ctx.set(x, y, color_pair.fg, color_pair.bg, glyph);
                 }
             }
         }
@@ -33,8 +31,7 @@ pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
     let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
     data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
 
-    draw_batch.target(1);
-    draw_batch.cls();
+    ctx.set_active_console(consoles::CHAR_CONSOLE);
 
     for (pos, render) in data.iter() {
         let idx = map.xy_idx(pos.x, pos.y);
@@ -42,17 +39,15 @@ pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
             let offset_x = pos.x - min_x;
             let offset_y = pos.y - min_y;
             if offset_x >= EDGE_BUFFER as i32 && offset_y >= EDGE_BUFFER as i32 {
-                draw_batch.set(
-                    Point::from((offset_x, offset_y)),
-                    render.colors,
+                ctx.set(
+                    offset_x, offset_y,
+                    render.colors.fg,
+                    render.colors.bg,
                     render.glyph,
                 );
             }
         }
     }
-
-    draw_batch.submit(0).expect("Unable to submit draw batch");
-    render_draw_buffer(ctx).expect("Rendering error");
 }
 
 fn get_tile_glyph(idx: usize, map: &Map) -> (rltk::FontCharType, ColorPair) {

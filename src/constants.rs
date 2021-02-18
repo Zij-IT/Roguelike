@@ -6,3 +6,10 @@ pub mod colors {
     pub const WALL_REVEALED: (u8, u8, u8) = (77, 77, 77);
     pub const WALL_VISIBLE: (u8, u8, u8) = (0, 179, 0);
 }
+
+pub mod consoles {
+    pub const HUD_CONSOLE: usize = 0;
+    pub const MAP_CONSOLE: usize = 1;
+    pub const CHAR_CONSOLE: usize = 2;
+    pub const NUM_OF_CONSOLES: usize = 3;
+}
