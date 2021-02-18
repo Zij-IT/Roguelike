@@ -1,13 +1,12 @@
-use crate::{ParticleLifetime, Position, Renderable, Rltk};
-use rltk::RGB;
+use crate::{ParticleLifetime, Position, Renderable};
+use rltk::{ColorPair, FontCharType};
 use specs::prelude::*;
 
 struct ParticleRequest {
     x: i32,
     y: i32,
-    fg: RGB,
-    bg: RGB,
-    glyph: rltk::FontCharType,
+    colors: ColorPair,
+    glyph: FontCharType,
     lifetime: f32,
 }
 
@@ -26,16 +25,14 @@ impl ParticleBuilder {
         &mut self,
         x: i32,
         y: i32,
-        fg: RGB,
-        bg: RGB,
-        glyph: rltk::FontCharType,
+        colors: ColorPair,
+        glyph: FontCharType,
         lifetime: f32,
     ) {
         self.requests.push(ParticleRequest {
             x,
             y,
-            fg,
-            bg,
+            colors,
             glyph,
             lifetime,
         })
@@ -72,8 +69,7 @@ impl<'a> System<'a> for ParticleSpawnSystem {
                     p,
                     Renderable {
                         glyph: new_particle.glyph,
-                        fg: new_particle.fg,
-                        bg: new_particle.bg,
+                        colors: new_particle.colors,
                         render_order: 0,
                     },
                 )
@@ -91,22 +87,26 @@ impl<'a> System<'a> for ParticleSpawnSystem {
     }
 }
 
-pub fn cull_dead_particles(ecs: &mut World, ctx: &Rltk) {
+pub fn cull_dead_particles(ecs: &mut World, frame_time: f32) {
+    let mut particles = ecs.write_storage::<ParticleLifetime>();
+    let entities = ecs.entities();
+
     let mut dead_particles = Vec::new();
-    {
-        let mut particles = ecs.write_storage::<ParticleLifetime>();
-        let entities = ecs.entities();
-        for (entity, mut particle) in (&entities, &mut particles).join() {
-            particle.lifetime_ms -= ctx.frame_time_ms;
-            if particle.lifetime_ms < 0. {
-                dead_particles.push(entity);
-            }
+
+    for (ent, particle) in (&entities, &mut particles).join() {
+        particle.lifetime_ms -= frame_time;
+        if particle.lifetime_ms <= 0. {
+            dead_particles.push(ent);
         }
     }
+
+    std::mem::drop(particles);
+    std::mem::drop(entities);
 
     for victim in dead_particles.iter() {
         ecs.delete_entity(*victim)
             .expect("Particle not properly deleted");
     }
+
     ecs.maintain();
 }

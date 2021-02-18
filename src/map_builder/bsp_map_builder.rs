@@ -1,4 +1,7 @@
-use super::{common::*, map::*, rect::Rect, MapBuilder};
+use super::{
+    common::apply_room_to_map, common::connect_rooms_via_corridors, common::EDGE_BUFFER, map::*,
+    rect::Rect, MapBuilder,
+};
 use crate::{spawner::populate_room, Position};
 use rltk::RandomNumberGenerator;
 use specs::World;
@@ -36,7 +39,7 @@ impl MapBuilder for BSPMapBuilder {
             self.map.height - EDGE_BUFFER,
         ));
         let first_room = self.rects[0];
-        self.add_subrects(first_room);
+        self.add_sub_rects(first_room);
         for _ in 0..MAX_ATTEMPTS {
             let rect = self.get_random_rect(&mut rng);
             let candidate = self.get_random_sub_rect(rect, &mut rng);
@@ -44,25 +47,14 @@ impl MapBuilder for BSPMapBuilder {
             if self.is_possible(candidate) {
                 apply_room_to_map(&mut self.map, &candidate);
                 self.rooms.push(candidate);
-                self.add_subrects(rect);
+                self.add_sub_rects(rect);
             }
         }
 
         //Sort left to right
         self.rooms.sort_by(|a, b| a.x1.cmp(&b.x1));
 
-        //Connect rooms via corridors
-        for i in 0..self.rooms.len() - 1 {
-            let room = self.rooms[i];
-            let next_room = self.rooms[i + 1];
-            let start_x = room.x1 + (rng.roll_dice(1, i32::abs(room.x1 - room.x2)) - 1);
-            let start_y = room.y1 + (rng.roll_dice(1, i32::abs(room.y1 - room.y2)) - 1);
-            let end_x =
-                next_room.x1 + (rng.roll_dice(1, i32::abs(next_room.x1 - next_room.x2)) - 1);
-            let end_y =
-                next_room.y1 + (rng.roll_dice(1, i32::abs(next_room.y1 - next_room.y2)) - 1);
-            self.draw_corridor(start_x, start_y, end_x, end_y);
-        }
+        connect_rooms_via_corridors(&mut self.map, &self.rooms, &mut rng);
 
         //Get stairs in!
         let stairs = self.rooms[self.rooms.len() - 1].center();
@@ -93,7 +85,7 @@ impl MapBuilder for BSPMapBuilder {
 }
 
 impl BSPMapBuilder {
-    fn add_subrects(&mut self, rect: Rect) {
+    fn add_sub_rects(&mut self, rect: Rect) {
         let width = i32::abs(rect.x1 - rect.x2);
         let height = i32::abs(rect.y1 - rect.y2);
         let half_width = i32::max(width / 2, 1);
@@ -169,25 +161,5 @@ impl BSPMapBuilder {
         }
 
         true
-    }
-
-    fn draw_corridor(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
-        let mut x = x1;
-        let mut y = y1;
-
-        while x != x2 || y != y2 {
-            if x < x2 {
-                x += 1;
-            } else if x > x2 {
-                x -= 1;
-            } else if y < y2 {
-                y += 1;
-            } else if y > y2 {
-                y -= 1;
-            }
-
-            let idx = self.map.xy_idx(x, y);
-            self.map.tiles[idx] = TileType::Floor;
-        }
     }
 }

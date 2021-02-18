@@ -7,7 +7,7 @@ use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
 mod camera;
 mod constants;
 mod ecs;
-mod gamelog;
+mod game_log;
 mod gui;
 mod map_builder;
 mod player;
@@ -17,7 +17,7 @@ mod save_load_util;
 mod spawner;
 
 use ecs::*;
-use gamelog::GameLog;
+use game_log::GameLog;
 use map_builder::*;
 use player::*;
 use random_table::*;
@@ -41,6 +41,10 @@ macro_rules! insert_all {
     };
 }
 
+//Constants
+const MAP_HEIGHT: i32 = 64;
+const MAP_WIDTH: i32 = 64;
+
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum RunState {
     AwaitingInput,
@@ -57,45 +61,18 @@ pub enum RunState {
     ShowTargeting(i32, Entity),
 }
 
-//Main gamestate
-pub struct State {
-    pub ecs: World,
+//Main construct
+pub struct EcsWorld {
+    pub world: World,
 }
 
-impl State {
-    ///Runs through all systems
-    fn run_systems(&mut self) {
-        let mut vis = VisibilitySystem {};
-        let mut mons = MonsterAI {};
-        let mut mapindex = MapIndexingSystem {};
-        let mut melee = MeleeCombatSystem {};
-        let mut damage = DamageSystem {};
-        let mut pickup_items = ItemCollectionSystem {};
-        let mut use_items = ItemUseSystem {};
-        let mut drop_items = ItemDropSystem {};
-        let mut rem_items = ItemRemoveSystem {};
-        let mut particles = ParticleSpawnSystem {};
-
-        vis.run_now(&self.ecs);
-        mons.run_now(&self.ecs);
-        mapindex.run_now(&self.ecs);
-        melee.run_now(&self.ecs);
-        damage.run_now(&self.ecs);
-        pickup_items.run_now(&self.ecs);
-        use_items.run_now(&self.ecs);
-        drop_items.run_now(&self.ecs);
-        rem_items.run_now(&self.ecs);
-        particles.run_now(&self.ecs);
-
-        self.ecs.maintain();
-    }
-
+impl EcsWorld {
     ///Gathers all entities that are not related to the player
     fn entities_to_remove_on_level_change(&mut self) -> Vec<Entity> {
-        let entities = self.ecs.entities();
-        let player_ent = self.ecs.fetch::<Entity>();
-        let backpack = self.ecs.read_storage::<InBackpack>();
-        let equipped_items = self.ecs.read_storage::<Equipped>();
+        let entities = self.world.entities();
+        let player_ent = self.world.fetch::<Entity>();
+        let backpack = self.world.read_storage::<InBackpack>();
+        let equipped_items = self.world.read_storage::<Equipped>();
 
         let mut to_delete = entities.join().collect::<Vec<_>>();
         to_delete.retain(|ent| {
@@ -124,21 +101,21 @@ impl State {
     fn goto_next_level(&mut self) {
         let to_delete = self.entities_to_remove_on_level_change();
         for target in to_delete {
-            self.ecs
+            self.world
                 .delete_entity(target)
                 .expect("Unable to delete entity during level transition");
         }
-        self.ecs.maintain();
+        self.world.maintain();
 
         //Build new map and place player
-        let current_depth = self.ecs.fetch::<Map>().depth;
+        let current_depth = self.world.fetch::<Map>().depth;
         self.generate_world_map(current_depth + 1);
 
         //Notify player and heal player
-        let player_ent = self.ecs.fetch::<Entity>();
-        let mut logs = self.ecs.fetch_mut::<GameLog>();
+        let player_ent = self.world.fetch::<Entity>();
+        let mut logs = self.world.fetch_mut::<GameLog>();
         logs.push("You descend to the next level.");
-        let mut all_stats = self.ecs.write_storage::<CombatStats>();
+        let mut all_stats = self.world.write_storage::<CombatStats>();
         if let Some(player_stats) = all_stats.get_mut(*player_ent) {
             player_stats.hp = i32::max(player_stats.hp, player_stats.max_hp / 2);
         }
@@ -146,19 +123,19 @@ impl State {
 
     ///Deletes all entities, and sets up for next game
     fn game_over_cleanup(&mut self) {
-        self.ecs.delete_all();
-        self.ecs.maintain();
+        self.world.delete_all();
+        self.world.maintain();
 
         //Add starting message
-        let mut logs = self.ecs.write_resource::<GameLog>();
+        let mut logs = self.world.write_resource::<GameLog>();
         logs.clear();
         logs.push("Welcome to my Roguelike!");
         std::mem::drop(logs);
 
         //Create new player resource
-        let player_ent = spawner::spawn_player(&mut self.ecs, 0, 0);
-        self.ecs.insert(player_ent);
-        self.ecs.insert(Point::new(0, 0));
+        let player_ent = spawner::spawn_player(&mut self.world, 0, 0);
+        self.world.insert(player_ent);
+        self.world.insert(Point::new(0, 0));
 
         //Build a new map and place player
         self.generate_world_map(1);
@@ -166,71 +143,69 @@ impl State {
 
     ///Generates a new level using random_builder with the specified depth
     fn generate_world_map(&mut self, new_depth: i32) {
-        //TODO width and height should be passed
-        let mut builder = map_builder::random_builder(64, 64, new_depth);
+        let mut builder = map_builder::random_builder(MAP_WIDTH, MAP_HEIGHT, new_depth);
         builder.build_map();
         {
-            let mut world = self.ecs.write_resource::<Map>();
+            let mut world = self.world.write_resource::<Map>();
             *world = builder.get_map();
         }
 
-        builder.spawn_entities(&mut self.ecs);
+        builder.spawn_entities(&mut self.world);
 
         //Updates the players position based on the new map generated
         //Also must update the player component, and the player pos resource
         let player_start = builder.get_starting_position();
         let (player_x, player_y) = (player_start.x, player_start.y);
-        let mut player_position = self.ecs.write_resource::<Point>();
+        let mut player_position = self.world.write_resource::<Point>();
         *player_position = Point::new(player_x, player_y);
-        let mut position_components = self.ecs.write_storage::<Position>();
-        let player_ent = self.ecs.fetch::<Entity>();
+        let mut position_components = self.world.write_storage::<Position>();
+        let player_ent = self.world.fetch::<Entity>();
         if let Some(player_pos_comp) = position_components.get_mut(*player_ent) {
             player_pos_comp.x = player_x;
             player_pos_comp.y = player_y;
         }
 
-        let mut viewsheds = self.ecs.write_storage::<Viewshed>();
+        let mut viewsheds = self.world.write_storage::<Viewshed>();
         if let Some(vs) = viewsheds.get_mut(*player_ent) {
             vs.is_dirty = true;
         }
     }
 }
 
-impl GameState for State {
+impl GameState for EcsWorld {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
-        particle_system::cull_dead_particles(&mut self.ecs, ctx);
-
-        let mut next_state = *self.ecs.fetch::<RunState>();
+        ecs::cull_dead_particles(&mut self.world, ctx.frame_time_ms);
+        let mut next_state = *self.world.fetch::<RunState>();
 
         //Draw map & renderables
         match next_state {
             RunState::MainMenu(_) => {}
             _ => {
-                gui::draw_ingame_ui(&self.ecs, ctx);
-                camera::render_camera(&self.ecs, ctx);
+                gui::draw_hud(&self.world, ctx);
+                camera::render_camera(&self.world, ctx);
             }
         }
 
         //Calculates next state based on current state
         match next_state {
             RunState::PreRun => {
-                self.run_systems();
+                ecs::input_systems::execute(&mut self.world);
                 next_state = RunState::AwaitingInput;
             }
             RunState::AwaitingInput => {
                 next_state = player_input(self, ctx);
             }
             RunState::PlayerTurn => {
-                self.run_systems();
+                ecs::all_systems::execute(&mut self.world);
                 next_state = RunState::MonsterTurn;
             }
             RunState::MonsterTurn => {
-                self.run_systems();
+                ecs::all_systems::execute(&mut self.world);
                 next_state = RunState::AwaitingInput;
             }
             RunState::SaveGame => {
-                save_load_util::save_game(&mut self.ecs);
+                save_load_util::save_game(&mut self.world);
                 next_state = RunState::MainMenu(gui::MainMenuSelection::LoadGame);
             }
             RunState::NextLevel => {
@@ -242,13 +217,14 @@ impl GameState for State {
                 match item_res {
                     gui::ItemMenuResult::Selected => {
                         let selected_item = selected_item.unwrap();
-                        if let Some(range) = self.ecs.read_storage::<Ranged>().get(selected_item) {
+                        if let Some(range) = self.world.read_storage::<Ranged>().get(selected_item)
+                        {
                             next_state = RunState::ShowTargeting(range.range, selected_item);
                         } else {
-                            let mut intent = self.ecs.write_storage::<WantsToUseItem>();
+                            let mut intent = self.world.write_storage::<WantsToUseItem>();
                             intent
                                 .insert(
-                                    *self.ecs.fetch::<Entity>(),
+                                    *self.world.fetch::<Entity>(),
                                     WantsToUseItem {
                                         item: selected_item,
                                         target: None,
@@ -267,10 +243,10 @@ impl GameState for State {
                 match item_res {
                     gui::ItemMenuResult::Selected => {
                         let selected_item = selected_item.unwrap();
-                        let mut intent = self.ecs.write_storage::<WantsToDropItem>();
+                        let mut intent = self.world.write_storage::<WantsToDropItem>();
                         intent
                             .insert(
-                                *self.ecs.fetch::<Entity>(),
+                                *self.world.fetch::<Entity>(),
                                 WantsToDropItem {
                                     item: selected_item,
                                 },
@@ -287,10 +263,10 @@ impl GameState for State {
                 match item_res {
                     gui::ItemMenuResult::Selected => {
                         let selected_item = selected_item.unwrap();
-                        let mut intent = self.ecs.write_storage::<WantsToRemoveItem>();
+                        let mut intent = self.world.write_storage::<WantsToRemoveItem>();
                         intent
                             .insert(
-                                *self.ecs.fetch::<Entity>(),
+                                *self.world.fetch::<Entity>(),
                                 WantsToRemoveItem {
                                     item: selected_item,
                                 },
@@ -303,12 +279,15 @@ impl GameState for State {
                 }
             }
             RunState::ShowTargeting(range, item) => {
-                let (item_res, target) = gui::draw_range(self, ctx, range);
+                let (item_res, target) = gui::show_targeting(self, ctx, range);
                 match item_res {
                     gui::ItemMenuResult::Selected => {
-                        let mut intent = self.ecs.write_storage::<WantsToUseItem>();
+                        let mut intent = self.world.write_storage::<WantsToUseItem>();
                         intent
-                            .insert(*self.ecs.fetch::<Entity>(), WantsToUseItem { item, target })
+                            .insert(
+                                *self.world.fetch::<Entity>(),
+                                WantsToUseItem { item, target },
+                            )
                             .expect("Unable to insert intent");
                         next_state = RunState::PlayerTurn;
                     }
@@ -327,7 +306,7 @@ impl GameState for State {
                     }
                     gui::MainMenuSelection::LoadGame => {
                         if save_load_util::does_save_exist() {
-                            save_load_util::load_game(&mut self.ecs);
+                            save_load_util::load_game(&mut self.world);
                             next_state = RunState::AwaitingInput;
                             save_load_util::delete_save();
                         } else {
@@ -350,8 +329,8 @@ impl GameState for State {
         }
 
         //Replace RunState with the new one
-        self.ecs.insert::<RunState>(next_state);
-        DamageSystem::delete_the_dead(&mut self.ecs);
+        self.world.insert::<RunState>(next_state);
+        ecs::cull_dead_characters(&mut self.world);
     }
 }
 
@@ -359,26 +338,26 @@ rltk::embedded_resource!(GAME_FONT, "../resources/cp437_8x8.png");
 
 fn main() -> BError {
     rltk::link_resource!(GAME_FONT, "/resources/cp437_8x8.png");
-    let context = {
-        let mut context = RltkBuilder::simple(80, 60)
-            .unwrap()
-            .with_title("Bashing Bytes")
-            .with_font("cp437_8x8.png", 8, 8)
-            .with_fullscreen(true)
-            .build()?;
-
-        context.set_active_font(1, true);
-
-        context
-    };
+    let context = RltkBuilder::new()
+        .with_title("Bashing Bytes")
+        .with_font("cp437_8x8.png", 8, 8)
+        .with_fullscreen(true)
+        .with_dimensions(80, 60)
+        .with_simple_console(80, 60, "cp437_8x8.png") // map
+        .with_simple_console_no_bg(80, 60, "cp437_8x8.png") // characters
+        .with_simple_console_no_bg(80, 60, "cp437_8x8.png") // hud
+        .with_tile_dimensions(8, 8)
+        .build()?;
 
     //Construct world
-    let mut gs = State { ecs: World::new() };
+    let mut world = EcsWorld {
+        world: World::new(),
+    };
 
     //Register the components
     //gs.ecs must be first, otherwise irrelevant
     register_all!(
-        gs.ecs,
+        world.world,
         AreaOfEffect,
         BlocksTile,
         CombatStats,
@@ -413,26 +392,25 @@ fn main() -> BError {
     //DEPENDENCIES:
     //player -> SimpleMarkerAllocator
     insert_all!(
-        gs.ecs,
+        world.world,
         SimpleMarkerAllocator::<SerializeMe>::new(),
         rltk::RandomNumberGenerator::new(),
         Map::new(1, 1, 1),
         Point::new(0, 0),
         RunState::MainMenu(gui::MainMenuSelection::NewGame),
-        particle_system::ParticleBuilder::new(),
+        ecs::ParticleBuilder::new(),
         rex_assets::RexAssets::new(),
         GameLog::default(),
-        ,
     );
 
     //Unable to include this statement in the above batch due to the borrow checker
-    //Reason: Both World::insert and spawn_player both borrow mutably
-    let player_ent = spawner::spawn_player(&mut gs.ecs, 0, 0);
-    insert_all!(gs.ecs, player_ent);
+    //Reason: Both world::insert and spawn_player both borrow world.world mutably
+    let player_ent = spawner::spawn_player(&mut world.world, 0, 0);
+    insert_all!(world.world, player_ent);
 
     //Generate map
-    gs.generate_world_map(1);
+    world.generate_world_map(1);
 
     //Start game
-    main_loop(context, gs)
+    main_loop(context, world)
 }

@@ -125,7 +125,7 @@ impl<'a> System<'a> for ItemRemoveSystem {
                 .expect("Unable to insert item into backpack");
             if entity == *player_ent {
                 logs.push(format!(
-                    "You unequipt the {}",
+                    "You unequip the {}",
                     names.get(intent.item).unwrap().name
                 ))
             }

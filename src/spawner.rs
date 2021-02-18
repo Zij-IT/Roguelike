@@ -3,8 +3,8 @@ use super::{
     InflictsDamage, Item, MeleeDamageBonus, Monster, Name, Player, Position, ProvidesHealing,
     RandomTable, Ranged, Renderable, SerializeMe, Viewshed,
 };
-use crate::{rect::Rect, Map, TileType};
-use rltk::{RandomNumberGenerator, RGB};
+use crate::{constants::colors, rect::Rect, Map, TileType};
+use rltk::{ColorPair, RandomNumberGenerator, RGB};
 use specs::prelude::*;
 use specs::saveload::{MarkedBuilder, SimpleMarker};
 use std::collections::HashMap;
@@ -103,9 +103,8 @@ pub fn spawn_player(ecs: &mut World, x: i32, y: i32) -> Entity {
         .with(Player {})
         .with(Renderable {
             glyph: rltk::to_cp437('@'),
-            fg: RGB::named(rltk::YELLOW),
-            bg: RGB::named(rltk::BLACK),
-            render_order: 0,
+            colors: ColorPair::new(RGB::named(rltk::YELLOW), RGB::from(colors::BACKGROUND)),
+            render_order: 1,
         })
         .with(Viewshed {
             visible_tiles: Vec::new(),
@@ -144,8 +143,7 @@ pub fn spawn_monster(
         .with(Position { x, y })
         .with(Renderable {
             glyph,
-            fg: RGB::named(rltk::RED),
-            bg: RGB::named(rltk::BLACK),
+            colors: ColorPair::new(RGB::named(rltk::RED), RGB::from(colors::BACKGROUND)),
             render_order: 1,
         })
         .with(Viewshed {
@@ -180,9 +178,8 @@ pub fn spawn_health_pot(ecs: &mut World, x: i32, y: i32) -> Entity {
         })
         .with(Renderable {
             glyph: rltk::to_cp437('¡'),
-            fg: RGB::named(rltk::MAGENTA),
-            bg: RGB::named(rltk::BLACK),
-            render_order: 1,
+            colors: ColorPair::new(RGB::named(rltk::MAGENTA), RGB::from(colors::BACKGROUND)),
+            render_order: 2,
         })
         .marked::<SimpleMarker<SerializeMe>>()
         .build()
@@ -193,8 +190,7 @@ fn spawn_magic_missile_scroll(ecs: &mut World, x: i32, y: i32) -> Entity {
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437(')'),
-            fg: RGB::named(rltk::CYAN),
-            bg: RGB::named(rltk::BLACK),
+            colors: ColorPair::new(RGB::named(rltk::CYAN), RGB::from(colors::BACKGROUND)),
             render_order: 2,
         })
         .with(Name {
@@ -213,8 +209,7 @@ fn spawn_fireball_scroll(ecs: &mut World, x: i32, y: i32) -> Entity {
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437(')'),
-            fg: RGB::named(rltk::ORANGE),
-            bg: RGB::named(rltk::BLACK),
+            colors: ColorPair::new(RGB::named(rltk::ORANGE), RGB::from(colors::BACKGROUND)),
             render_order: 2,
         })
         .with(Name {
@@ -234,8 +229,7 @@ fn spawn_simple_dagger(ecs: &mut World, x: i32, y: i32) -> Entity {
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437('/'),
-            fg: RGB::named(rltk::CYAN),
-            bg: RGB::named(rltk::BLACK),
+            colors: ColorPair::new(RGB::named(rltk::CYAN), RGB::from(colors::BACKGROUND)),
             render_order: 2,
         })
         .with(Name {
@@ -255,8 +249,7 @@ fn spawn_simple_shield(ecs: &mut World, x: i32, y: i32) -> Entity {
         .with(Position { x, y })
         .with(Renderable {
             glyph: 248,
-            fg: RGB::named(rltk::CYAN),
-            bg: RGB::named(rltk::BLACK),
+            colors: ColorPair::new(RGB::named(rltk::CYAN), RGB::from(colors::BACKGROUND)),
             render_order: 2,
         })
         .with(Name {

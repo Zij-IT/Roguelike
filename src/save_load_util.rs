@@ -39,10 +39,10 @@ macro_rules! deserialize_individually {
 }
 
 pub fn save_game(ecs: &mut World) {
-    let mapcopy = ecs.get_mut::<Map>().unwrap().clone();
+    let map_copy = ecs.get_mut::<Map>().unwrap().clone();
     let save_helper = ecs
         .create_entity()
-        .with(SerializationHelper { map: mapcopy })
+        .with(SerializationHelper { map: map_copy })
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
     {

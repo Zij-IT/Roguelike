@@ -2,35 +2,35 @@ use super::{
     components::{
         CombatStats, Item, Monster, Player, Position, Viewshed, WantsToMelee, WantsToPickupItem,
     },
-    GameLog, RunState, State,
+    EcsWorld, GameLog, RunState,
 };
 use crate::{map::*, TileStatus, TileType};
 use rltk::{Point, Rltk, VirtualKeyCode as VKC};
 use specs::prelude::*;
 
-pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
+pub fn player_input(gs: &mut EcsWorld, ctx: &mut Rltk) -> RunState {
     match ctx.key {
         None => {
             return RunState::AwaitingInput;
         }
         Some(key) => match key {
             //Movement keys
-            VKC::H | VKC::Left => try_move_player(-1, 0, &mut gs.ecs),
-            VKC::L | VKC::Right => try_move_player(1, 0, &mut gs.ecs),
-            VKC::K | VKC::Up => try_move_player(0, -1, &mut gs.ecs),
-            VKC::J | VKC::Down => try_move_player(0, 1, &mut gs.ecs),
+            VKC::H | VKC::Left => try_move_player(-1, 0, &mut gs.world),
+            VKC::L | VKC::Right => try_move_player(1, 0, &mut gs.world),
+            VKC::K | VKC::Up => try_move_player(0, -1, &mut gs.world),
+            VKC::J | VKC::Down => try_move_player(0, 1, &mut gs.world),
             //Item keys
-            VKC::G => get_item(&mut gs.ecs),
+            VKC::G => get_item(&mut gs.world),
             VKC::I => return RunState::ShowInventory,
             VKC::D => return RunState::ShowDropItem,
             VKC::R => return RunState::ShowRemoveItem,
             //Save key
             VKC::Escape => return RunState::SaveGame,
             //Skip key
-            VKC::Space => return skip_turn(&mut gs.ecs),
+            VKC::Space => return skip_turn(&mut gs.world),
             //Descend Key
             VKC::Period => {
-                if try_next_level(&mut gs.ecs) {
+                if try_next_level(&mut gs.world) {
                     return RunState::NextLevel;
                 }
             }

@@ -1,8 +1,9 @@
 use super::ParticleBuilder;
 use crate::{
-    CombatStats, DefenseBonus, Equipped, GameLog, MeleeDamageBonus, Name, Position, SufferDamage,
-    WantsToMelee,
+    constants::colors, CombatStats, DefenseBonus, Equipped, GameLog, MeleeDamageBonus, Name,
+    Position, SufferDamage, WantsToMelee,
 };
+use rltk::{ColorPair, RGB};
 use specs::prelude::*;
 
 pub struct MeleeCombatSystem {}
@@ -82,8 +83,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
                         particle_builder.create_particle(
                             pos.x,
                             pos.y,
-                            rltk::RGB::named(rltk::ORANGE),
-                            rltk::RGB::named(rltk::BLACK),
+                            ColorPair::new(RGB::named(rltk::ORANGE), RGB::from(colors::BACKGROUND)),
                             19, //‼
                             200.0,
                         );

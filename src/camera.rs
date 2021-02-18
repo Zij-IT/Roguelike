@@ -1,5 +1,5 @@
 use crate::{constants::colors, Map, Position, Renderable, TileStatus, TileType};
-use rltk::{Point, Rltk, RGB};
+use rltk::{render_draw_buffer, ColorPair, DrawBatch, Point, Rltk};
 use specs::prelude::*;
 
 const EDGE_BUFFER: usize = 2;
@@ -10,13 +10,17 @@ pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
     let map_height = map.height - 1;
     let (min_x, max_x, min_y, max_y) = get_screen_bounds(ecs);
 
-    for (y, ty) in (min_y..max_y).enumerate().skip(EDGE_BUFFER) {
-        for (x, tx) in (min_x..max_x).enumerate().skip(EDGE_BUFFER) {
+    let mut draw_batch = DrawBatch::new();
+    draw_batch.target(0);
+    draw_batch.cls();
+
+    for (ty, y) in (min_y..max_y).zip(0..).skip(EDGE_BUFFER) {
+        for (tx, x) in (min_x..max_x).zip(0..).skip(EDGE_BUFFER) {
             if tx > 0 && tx < map_width && ty > 0 && ty < map_height {
                 let idx = map.xy_idx(tx, ty);
                 if map.is_tile_status_set(idx, TileStatus::Revealed) {
-                    let (glyph, fg, bg) = get_tile_glyph(idx, &*map);
-                    ctx.set(x, y, fg, bg, glyph);
+                    let (glyph, color_pair) = get_tile_glyph(idx, &*map);
+                    draw_batch.set(Point::from((x, y)), color_pair, glyph);
                 }
             }
         }
@@ -29,19 +33,29 @@ pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
     let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
     data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
 
+    draw_batch.target(1);
+    draw_batch.cls();
+
     for (pos, render) in data.iter() {
         let idx = map.xy_idx(pos.x, pos.y);
         if map.is_tile_status_set(idx, TileStatus::Visible) {
             let offset_x = pos.x - min_x;
             let offset_y = pos.y - min_y;
             if offset_x >= EDGE_BUFFER as i32 && offset_y >= EDGE_BUFFER as i32 {
-                ctx.set(offset_x, offset_y, render.fg, render.bg, render.glyph);
+                draw_batch.set(
+                    Point::from((offset_x, offset_y)),
+                    render.colors,
+                    render.glyph,
+                );
             }
         }
     }
+
+    draw_batch.submit(0).expect("Unable to submit draw batch");
+    render_draw_buffer(ctx).expect("Rendering error");
 }
 
-fn get_tile_glyph(idx: usize, map: &Map) -> (rltk::FontCharType, RGB, RGB) {
+fn get_tile_glyph(idx: usize, map: &Map) -> (rltk::FontCharType, ColorPair) {
     let bg = colors::BACKGROUND;
     let (glyph, fg) = match map.tiles[idx] {
         TileType::Wall => (
@@ -56,12 +70,12 @@ fn get_tile_glyph(idx: usize, map: &Map) -> (rltk::FontCharType, RGB, RGB) {
         TileType::StairsDown => (174, colors::STAIRS),
     };
 
-    (glyph, RGB::from(fg), RGB::from(bg))
+    (glyph, ColorPair::new(fg, bg))
 }
 
 pub fn get_screen_bounds(ecs: &World) -> (i32, i32, i32, i32) {
     let player_pos = ecs.fetch::<Point>();
-    let (x_chars, y_chars) = (57, 43); //Set by UI Image
+    let (x_chars, y_chars) = (57, 43); //Determined by UI Image
 
     let center_x = (x_chars / 2) as i32;
     let center_y = (y_chars / 2) as i32;

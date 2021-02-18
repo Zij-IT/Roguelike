@@ -1,10 +1,10 @@
-pub mod damage_system;
-pub mod item_systems;
-pub mod map_indexing_system;
-pub mod melee_combat_system;
-pub mod monster_ai_system;
-pub mod particle_system;
-pub mod visibility_system;
+mod damage_system;
+mod item_systems;
+mod map_indexing_system;
+mod melee_combat_system;
+mod monster_ai_system;
+mod particle_system;
+mod visibility_system;
 
 pub use damage_system::*;
 pub use item_systems::*;

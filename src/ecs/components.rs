@@ -1,5 +1,5 @@
 use crate::map;
-use rltk::RGB;
+use rltk::ColorPair;
 use serde::{Deserialize, Serialize};
 use specs::error::NoError;
 use specs::prelude::*;
@@ -26,8 +26,7 @@ pub struct Position {
 #[derive(Component, ConvertSaveload, Clone)]
 pub struct Renderable {
     pub glyph: rltk::FontCharType,
-    pub fg: RGB,
-    pub bg: RGB,
+    pub colors: ColorPair,
     pub render_order: i32,
 }
 
