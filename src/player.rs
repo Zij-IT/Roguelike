@@ -4,9 +4,9 @@ use super::{
     },
     EcsWorld, GameLog, RunState,
 };
-use crate::{map::*, TileStatus, TileType};
+use crate::map_builder::map::{Map, TileStatus, TileType};
 use rltk::{Point, Rltk, VirtualKeyCode as VKC};
-use specs::prelude::*;
+use specs::{Entity, Join, World, WorldExt};
 
 pub fn player_input(gs: &mut EcsWorld, ctx: &mut Rltk) -> RunState {
     match ctx.key {

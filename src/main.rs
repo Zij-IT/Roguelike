@@ -11,17 +11,15 @@ mod game_log;
 mod gui;
 mod map_builder;
 mod player;
-mod random_table;
 mod rex_assets;
 mod save_load_util;
-mod spawner;
+mod spawning;
 
+use constants::consoles;
 use ecs::*;
 use game_log::GameLog;
-use map_builder::*;
-use player::*;
-use random_table::*;
-use constants::consoles;
+use map_builder::map::Map;
+use player::player_input;
 
 //Macros
 ///Given a specs::World, and a list of components, it registers all components in the world
@@ -134,7 +132,7 @@ impl EcsWorld {
         std::mem::drop(logs);
 
         //Create new player resource
-        let player_ent = spawner::spawn_player(&mut self.world, 0, 0);
+        let player_ent = spawning::spawn_player(&mut self.world, 0, 0);
         self.world.insert(player_ent);
         self.world.insert(Point::new(0, 0));
 
@@ -175,7 +173,6 @@ impl EcsWorld {
 
 impl GameState for EcsWorld {
     fn tick(&mut self, ctx: &mut Rltk) {
-
         //Clear all consoles
         for i in 0..consoles::NUM_OF_CONSOLES {
             ctx.set_active_console(i);
@@ -350,7 +347,6 @@ fn main() -> BError {
         .with_simple_console(80, 60, "cp437_8x8.png") // map
         .with_simple_console_no_bg(80, 60, "cp437_8x8.png") // creatures
         .with_sparse_console(80, 60, "cp437_8x8.png") // hud
-        //.with_simple_console(80, 60, "cp437_8x8.png")//Tooltips and the like
         .with_tile_dimensions(8, 8)
         .build()?;
 
@@ -381,7 +377,7 @@ fn main() -> BError {
         Position,
         ProvidesHealing,
         Ranged,
-        Renderable,
+        Render,
         SerializationHelper,
         SimpleMarker<SerializeMe>,
         SufferDamage,
@@ -405,12 +401,12 @@ fn main() -> BError {
         RunState::MainMenu(gui::MainMenuSelection::NewGame),
         ecs::ParticleBuilder::new(),
         rex_assets::RexAssets::new(),
-        GameLog::default(),
+        GameLog::new(),
     );
 
     //Unable to include this statement in the above batch due to the borrow checker
     //Reason: Both world::insert and spawn_player both borrow world.world mutably
-    let player_ent = spawner::spawn_player(&mut world.world, 0, 0);
+    let player_ent = spawning::spawn_player(&mut world.world, 0, 0);
     insert_all!(world.world, player_ent);
 
     //Generate map

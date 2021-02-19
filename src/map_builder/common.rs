@@ -1,4 +1,7 @@
-use super::{Map, Rect, TileType};
+use super::{
+    map::{Map, TileType},
+    rect::Rect,
+};
 use rltk::RandomNumberGenerator;
 use std::collections::HashMap;
 

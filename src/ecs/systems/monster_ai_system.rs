@@ -1,4 +1,8 @@
-use crate::{Map, Monster, Position, RunState, Viewshed, WantsToMelee};
+use crate::{
+    components::{Monster, Position, Viewshed, WantsToMelee},
+    map_builder::map::Map,
+    RunState,
+};
 use rltk::Point;
 use specs::prelude::*;
 

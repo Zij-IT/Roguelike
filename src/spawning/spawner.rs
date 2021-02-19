@@ -1,17 +1,22 @@
-use super::{
-    AreaOfEffect, BlocksTile, CombatStats, Consumable, DefenseBonus, Equipable, EquipmentSlot,
-    InflictsDamage, Item, MeleeDamageBonus, Monster, Name, Player, Position, ProvidesHealing,
-    RandomTable, Ranged, Renderable, SerializeMe, Viewshed,
+use super::random_table::RandomTable;
+use crate::{
+    constants::colors,
+    ecs::components::*,
+    map_builder::{
+        map::{Map, TileType},
+        rect::Rect,
+    },
 };
-use crate::{constants::colors, rect::Rect, Map, TileType};
 use rltk::{ColorPair, RandomNumberGenerator, RGB};
-use specs::prelude::*;
-use specs::saveload::{MarkedBuilder, SimpleMarker};
+use specs::{
+    prelude::*,
+    saveload::{MarkedBuilder, SimpleMarker},
+};
 use std::collections::HashMap;
 
 const MAX_MONSTERS: i32 = 4;
 
-//ROOM POPULATION-----
+//Public Functions-----
 pub fn populate_room(ecs: &mut World, room: &Rect) {
     let mut possible_spawns = Vec::new();
     let map = ecs.fetch::<Map>();
@@ -58,6 +63,45 @@ pub fn spawn_region(ecs: &mut World, area: &[(i32, i32)], map_depth: i32) {
     }
 }
 
+pub fn spawn_player(ecs: &mut World, x: i32, y: i32) -> Entity {
+    ecs.create_entity()
+        .with(Position { x, y })
+        .with(Player {})
+        .with(Render {
+            glyph: rltk::to_cp437('@'),
+            colors: ColorPair::new(RGB::named(rltk::YELLOW), RGB::from(colors::BACKGROUND)),
+            render_order: 1,
+        })
+        .with(Viewshed {
+            visible_tiles: Vec::new(),
+            range: 8,
+            is_dirty: true,
+        })
+        .with(Name {
+            name: "Player".to_string(),
+        })
+        .with(CombatStats {
+            max_hp: 30,
+            hp: 30,
+            defense: 2,
+            power: 5,
+        })
+        .marked::<SimpleMarker<SerializeMe>>()
+        .build()
+}
+
+//Private Functions----
+fn create_room_table(map_depth: i32) -> RandomTable {
+    RandomTable::new()
+        .insert("Goblin", 9 + map_depth)
+        .insert("Kobold", 3)
+        .insert("HealthPotion", 7)
+        .insert("FireballScroll", 2 + map_depth)
+        .insert("MagicMissileScroll", 4 + map_depth)
+        .insert("SimpleDagger", 3)
+        .insert("SimpleShield", 3)
+}
+
 fn spawn_named_entity(ecs: &mut World, ((x, y), name): &(&(i32, i32), &String)) {
     match name.as_ref() {
         "Goblin" => {
@@ -85,63 +129,18 @@ fn spawn_named_entity(ecs: &mut World, ((x, y), name): &(&(i32, i32), &String)) 
     };
 }
 
-fn create_room_table(map_depth: i32) -> RandomTable {
-    RandomTable::new()
-        .insert("Goblin", 9 + map_depth)
-        .insert("Kobold", 3)
-        .insert("HealthPotion", 7)
-        .insert("FireballScroll", 2 + map_depth)
-        .insert("MagicMissileScroll", 4 + map_depth)
-        .insert("SimpleDagger", 3)
-        .insert("SimpleShield", 3)
-}
-
-//ENTITIES-----------
-pub fn spawn_player(ecs: &mut World, x: i32, y: i32) -> Entity {
-    ecs.create_entity()
-        .with(Position { x, y })
-        .with(Player {})
-        .with(Renderable {
-            glyph: rltk::to_cp437('@'),
-            colors: ColorPair::new(RGB::named(rltk::YELLOW), RGB::from(colors::BACKGROUND)),
-            render_order: 1,
-        })
-        .with(Viewshed {
-            visible_tiles: Vec::new(),
-            range: 8,
-            is_dirty: true,
-        })
-        .with(Name {
-            name: "Player".to_string(),
-        })
-        .with(CombatStats {
-            max_hp: 30,
-            hp: 30,
-            defense: 2,
-            power: 5,
-        })
-        .marked::<SimpleMarker<SerializeMe>>()
-        .build()
-}
-
-pub fn spawn_kobold(ecs: &mut World, x: i32, y: i32) -> Entity {
+fn spawn_kobold(ecs: &mut World, x: i32, y: i32) -> Entity {
     spawn_monster(ecs, x, y, rltk::to_cp437('k'), "Kobold")
 }
 
-pub fn spawn_goblin(ecs: &mut World, x: i32, y: i32) -> Entity {
+fn spawn_goblin(ecs: &mut World, x: i32, y: i32) -> Entity {
     spawn_monster(ecs, x, y, rltk::to_cp437('g'), "Goblin")
 }
 
-pub fn spawn_monster(
-    ecs: &mut World,
-    x: i32,
-    y: i32,
-    glyph: rltk::FontCharType,
-    name: &str,
-) -> Entity {
+fn spawn_monster(ecs: &mut World, x: i32, y: i32, glyph: rltk::FontCharType, name: &str) -> Entity {
     ecs.create_entity()
         .with(Position { x, y })
-        .with(Renderable {
+        .with(Render {
             glyph,
             colors: ColorPair::new(RGB::named(rltk::RED), RGB::from(colors::BACKGROUND)),
             render_order: 1,
@@ -167,7 +166,7 @@ pub fn spawn_monster(
 }
 
 //ITEMS---------------
-pub fn spawn_health_pot(ecs: &mut World, x: i32, y: i32) -> Entity {
+fn spawn_health_pot(ecs: &mut World, x: i32, y: i32) -> Entity {
     ecs.create_entity()
         .with(Position { x, y })
         .with(Item {})
@@ -176,7 +175,7 @@ pub fn spawn_health_pot(ecs: &mut World, x: i32, y: i32) -> Entity {
         .with(Name {
             name: "Health Potion".to_string(),
         })
-        .with(Renderable {
+        .with(Render {
             glyph: rltk::to_cp437('¡'),
             colors: ColorPair::new(RGB::named(rltk::MAGENTA), RGB::from(colors::BACKGROUND)),
             render_order: 2,
@@ -188,7 +187,7 @@ pub fn spawn_health_pot(ecs: &mut World, x: i32, y: i32) -> Entity {
 fn spawn_magic_missile_scroll(ecs: &mut World, x: i32, y: i32) -> Entity {
     ecs.create_entity()
         .with(Position { x, y })
-        .with(Renderable {
+        .with(Render {
             glyph: rltk::to_cp437(')'),
             colors: ColorPair::new(RGB::named(rltk::CYAN), RGB::from(colors::BACKGROUND)),
             render_order: 2,
@@ -207,7 +206,7 @@ fn spawn_magic_missile_scroll(ecs: &mut World, x: i32, y: i32) -> Entity {
 fn spawn_fireball_scroll(ecs: &mut World, x: i32, y: i32) -> Entity {
     ecs.create_entity()
         .with(Position { x, y })
-        .with(Renderable {
+        .with(Render {
             glyph: rltk::to_cp437(')'),
             colors: ColorPair::new(RGB::named(rltk::ORANGE), RGB::from(colors::BACKGROUND)),
             render_order: 2,
@@ -227,7 +226,7 @@ fn spawn_fireball_scroll(ecs: &mut World, x: i32, y: i32) -> Entity {
 fn spawn_simple_dagger(ecs: &mut World, x: i32, y: i32) -> Entity {
     ecs.create_entity()
         .with(Position { x, y })
-        .with(Renderable {
+        .with(Render {
             glyph: rltk::to_cp437('/'),
             colors: ColorPair::new(RGB::named(rltk::CYAN), RGB::from(colors::BACKGROUND)),
             render_order: 2,
@@ -247,7 +246,7 @@ fn spawn_simple_dagger(ecs: &mut World, x: i32, y: i32) -> Entity {
 fn spawn_simple_shield(ecs: &mut World, x: i32, y: i32) -> Entity {
     ecs.create_entity()
         .with(Position { x, y })
-        .with(Renderable {
+        .with(Render {
             glyph: 248,
             colors: ColorPair::new(RGB::named(rltk::CYAN), RGB::from(colors::BACKGROUND)),
             render_order: 2,

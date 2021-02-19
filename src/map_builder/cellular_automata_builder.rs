@@ -1,5 +1,9 @@
-use super::{common::*, map::*, MapBuilder};
-use crate::{spawner, Position};
+use super::{
+    common::{cull_and_set_exit, gen_voronoi_regions, EDGE_BUFFER},
+    map::{Map, TileType},
+    MapBuilder,
+};
+use crate::{components::Position, spawning::spawn_region};
 use rltk::RandomNumberGenerator;
 use specs::World;
 use std::collections::HashMap;
@@ -90,7 +94,7 @@ impl MapBuilder for CellularAutomataBuilder {
 
     fn spawn_entities(&mut self, ecs: &mut World) {
         for area in self.noise_areas.iter() {
-            spawner::spawn_region(ecs, area.1, self.map.depth);
+            spawn_region(ecs, area.1, self.map.depth);
         }
     }
 

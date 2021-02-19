@@ -1,8 +1,9 @@
 use super::{
-    common::connect_rooms_via_corridors, common::EDGE_BUFFER, Map, MapBuilder, Position, Rect,
-    TileType,
+    common::{connect_rooms_via_corridors, EDGE_BUFFER},
+    map::{Map, TileType},
+    MapBuilder, rect::Rect,
 };
-use crate::spawner::populate_room;
+use crate::{components::Position, spawning::populate_room};
 use rltk::RandomNumberGenerator;
 use specs::World;
 

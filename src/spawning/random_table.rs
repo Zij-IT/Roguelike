@@ -1,20 +1,5 @@
 use rltk::RandomNumberGenerator;
 
-pub struct RandomEntry {
-    name: String,
-    weight: i32,
-}
-
-impl RandomEntry {
-    pub fn new<StrType: ToString>(name: StrType, weight: i32) -> RandomEntry {
-        RandomEntry {
-            name: name.to_string(),
-            weight,
-        }
-    }
-}
-
-#[derive(Default)]
 pub struct RandomTable {
     entries: Vec<RandomEntry>,
     total_weight: i32,
@@ -52,5 +37,19 @@ impl RandomTable {
         }
 
         None
+    }
+}
+
+struct RandomEntry {
+    name: String,
+    weight: i32,
+}
+
+impl RandomEntry {
+    pub fn new<StrType: ToString>(name: StrType, weight: i32) -> RandomEntry {
+        RandomEntry {
+            name: name.to_string(),
+            weight,
+        }
     }
 }

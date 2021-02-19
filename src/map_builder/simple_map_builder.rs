@@ -1,5 +1,9 @@
-use super::{common::*, map::*, rect, MapBuilder};
-use crate::{components::Position, spawner::*};
+use super::{
+    common::{apply_horizontal_tunnel, apply_room_to_map, apply_vertical_tunnel},
+    map::{Map, TileType},
+    rect, MapBuilder,
+};
+use crate::{components::Position, spawning::populate_room};
 use specs::World;
 
 pub struct SimpleMapBuilder {

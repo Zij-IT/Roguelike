@@ -1,9 +1,11 @@
-use crate::map;
+use crate::map_builder::map::Map;
 use rltk::ColorPair;
 use serde::{Deserialize, Serialize};
-use specs::error::NoError;
-use specs::prelude::*;
-use specs::saveload::{ConvertSaveload, Marker};
+use specs::{
+    error::NoError,
+    prelude::*,
+    saveload::{ConvertSaveload, Marker},
+};
 use specs_derive::*;
 
 //Components are organized by who they are **TYPICALLY** assigned to.
@@ -24,7 +26,7 @@ pub struct Position {
 }
 
 #[derive(Component, ConvertSaveload, Clone)]
-pub struct Renderable {
+pub struct Render {
     pub glyph: rltk::FontCharType,
     pub colors: ColorPair,
     pub render_order: i32,
@@ -34,7 +36,7 @@ pub struct SerializeMe;
 
 #[derive(Component, Serialize, Deserialize, Clone)]
 pub struct SerializationHelper {
-    pub map: map::Map,
+    pub map: Map,
 }
 
 //(N)PC Components

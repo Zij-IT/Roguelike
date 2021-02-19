@@ -1,4 +1,7 @@
-use crate::{Map, Position, TileStatus, Viewshed};
+use crate::{
+    components::{Position, Viewshed},
+    map_builder::map::{Map, TileStatus},
+};
 use rltk::{field_of_view, Point};
 use specs::prelude::*;
 

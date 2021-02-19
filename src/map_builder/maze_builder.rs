@@ -1,5 +1,9 @@
-use super::{common::*, Map, MapBuilder, TileType};
-use crate::{spawner, Position};
+use super::{
+    common::{gen_voronoi_regions, EDGE_BUFFER},
+    map::{Map, TileType},
+    MapBuilder,
+};
+use crate::{components::Position, spawning};
 use rltk::RandomNumberGenerator;
 use specs::World;
 use std::collections::HashMap;
@@ -46,7 +50,7 @@ impl MapBuilder for MazeBuilder {
 
     fn spawn_entities(&mut self, ecs: &mut World) {
         for area in self.noise_areas.iter() {
-            spawner::spawn_region(ecs, area.1, self.map.depth);
+            spawning::spawn_region(ecs, area.1, self.map.depth);
         }
     }
 

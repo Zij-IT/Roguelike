@@ -1,7 +1,8 @@
 use super::{
-    camera, constants::colors, rex_assets, EcsWorld, Equipped, InBackpack, Name, RunState, Viewshed, constants::consoles
+    camera, constants::colors, constants::consoles, rex_assets, EcsWorld, Equipped, InBackpack,
+    Name, RunState, Viewshed,
 };
-use rltk::{Point, Rltk, VirtualKeyCode, RGB, DrawBatch, xp_to_console};
+use rltk::{Point, Rltk, VirtualKeyCode, RGB};
 use specs::prelude::*;
 
 pub fn draw_hud(ecs: &World, ctx: &mut Rltk) {
@@ -207,7 +208,7 @@ pub fn draw_main_menu(gs: &mut EcsWorld, ctx: &mut Rltk) -> MainMenuResult {
     ctx.set_active_console(consoles::HUD_CONSOLE);
     ctx.render_xp_sprite(&assets.title_screen, 0, 0);
 
-    if let RunState::MainMenu(current_selection) = *(gs.world.fetch::<RunState>()) {
+    if let RunState::MainMenu(current_selection) = *gs.world.fetch::<RunState>() {
         let selected = RGB::named(rltk::YELLOW);
 
         let main_menu_options = ["Begin New Game", "Load Game", "Quit"];
@@ -259,7 +260,6 @@ pub enum GameOverResult {
 }
 
 pub fn show_game_over(ctx: &mut Rltk) -> GameOverResult {
-
     for i in 0..consoles::NUM_OF_CONSOLES {
         ctx.set_active_console(i);
         ctx.cls();

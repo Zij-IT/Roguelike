@@ -1,6 +1,10 @@
-use crate::{constants::colors, constants::consoles, Map, Position, Renderable, TileStatus, TileType};
-use rltk::{render_draw_buffer, ColorPair, DrawBatch, Point, Rltk};
-use specs::prelude::*;
+use crate::{
+    components::{Position, Render},
+    constants::{colors, consoles},
+    map_builder::map::{Map, TileStatus, TileType},
+};
+use rltk::{ColorPair, Point, Rltk};
+use specs::{Join, World, WorldExt};
 
 const EDGE_BUFFER: usize = 2;
 
@@ -25,7 +29,7 @@ pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
     }
 
     let positions = ecs.read_storage::<Position>();
-    let renderables = ecs.read_storage::<Renderable>();
+    let renderables = ecs.read_storage::<Render>();
     let map = ecs.fetch::<Map>();
 
     let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
@@ -40,7 +44,8 @@ pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
             let offset_y = pos.y - min_y;
             if offset_x >= EDGE_BUFFER as i32 && offset_y >= EDGE_BUFFER as i32 {
                 ctx.set(
-                    offset_x, offset_y,
+                    offset_x,
+                    offset_y,
                     render.colors.fg,
                     render.colors.bg,
                     render.glyph,

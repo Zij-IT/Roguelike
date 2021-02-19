@@ -1,4 +1,7 @@
-use crate::{BlocksTile, Map, Position, TileStatus};
+use crate::{
+    components::{BlocksTile, Position},
+    map_builder::map::{Map, TileStatus},
+};
 use specs::prelude::*;
 
 pub struct MapIndexingSystem {}

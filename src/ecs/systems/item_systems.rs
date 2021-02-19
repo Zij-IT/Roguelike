@@ -1,10 +1,14 @@
 use crate::{
-    AreaOfEffect, CombatStats, Consumable, Equipable, Equipped, GameLog, InBackpack,
-    InflictsDamage, Map, Name, Position, ProvidesHealing, SufferDamage, WantsToDropItem,
-    WantsToPickupItem, WantsToRemoveItem, WantsToUseItem,
+    components::{
+        AreaOfEffect, CombatStats, Consumable, Equipable, Equipped, InBackpack, InflictsDamage,
+        Name, Position, ProvidesHealing, SufferDamage, WantsToDropItem, WantsToPickupItem,
+        WantsToRemoveItem, WantsToUseItem,
+    },
+    game_log::GameLog,
+    map_builder::map::Map,
 };
 use rltk::{Algorithm2D, Point};
-use specs::prelude::*;
+use specs::{Entities, Entity, Join, ReadExpect, ReadStorage, System, WriteExpect, WriteStorage};
 
 const INVENTORY_LIMIT: usize = 9;
 

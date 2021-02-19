@@ -1,4 +1,4 @@
-use crate::{ParticleLifetime, Position, Renderable};
+use crate::{ParticleLifetime, Position, Render};
 use rltk::{ColorPair, FontCharType};
 use specs::prelude::*;
 
@@ -47,7 +47,7 @@ impl<'a> System<'a> for ParticleSpawnSystem {
         Entities<'a>,
         WriteExpect<'a, ParticleBuilder>,
         WriteStorage<'a, Position>,
-        WriteStorage<'a, Renderable>,
+        WriteStorage<'a, Render>,
         WriteStorage<'a, ParticleLifetime>,
     );
 
@@ -67,7 +67,7 @@ impl<'a> System<'a> for ParticleSpawnSystem {
             renderables
                 .insert(
                     p,
-                    Renderable {
+                    Render {
                         glyph: new_particle.glyph,
                         colors: new_particle.colors,
                         render_order: 0,

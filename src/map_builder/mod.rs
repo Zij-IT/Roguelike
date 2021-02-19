@@ -1,36 +1,31 @@
-pub mod bsp_interior_builder;
-pub mod bsp_map_builder;
-pub mod cellular_automata_builder;
-pub mod common;
-pub mod drunkard_builder;
+mod bsp_interior_builder;
+mod bsp_map_builder;
+mod cellular_automata_builder;
+mod common;
+mod drunkard_builder;
+mod maze_builder;
+mod simple_map_builder;
+
 pub mod map;
-pub mod maze_builder;
 pub mod rect;
-pub mod simple_map_builder;
 
-pub use bsp_interior_builder::*;
-pub use bsp_map_builder::*;
-pub use cellular_automata_builder::*;
-pub use common::*;
-pub use drunkard_builder::*;
-pub use map::*;
-pub use maze_builder::*;
-pub use rect::*;
-pub use simple_map_builder::*;
-
-use crate::Position;
-use rltk::RandomNumberGenerator;
-use specs::World;
+use bsp_interior_builder::BSPInteriorBuilder;
+use bsp_map_builder::BSPMapBuilder;
+use cellular_automata_builder::CellularAutomataBuilder;
+use drunkard_builder::{DrunkardSpawnMode, DrunkardsBuilder};
+use map::Map;
+use maze_builder::MazeBuilder;
+use simple_map_builder::SimpleMapBuilder;
 
 pub trait MapBuilder {
     fn build_map(&mut self);
-    fn spawn_entities(&mut self, ecs: &mut World);
+    fn spawn_entities(&mut self, ecs: &mut specs::World);
     fn get_map(&self) -> Map;
-    fn get_starting_position(&self) -> Position;
+    fn get_starting_position(&self) -> super::ecs::Position;
 }
 
 pub fn random_builder(width: i32, height: i32, depth: i32) -> Box<dyn MapBuilder> {
-    let mut rng = RandomNumberGenerator::new();
+    let mut rng = rltk::RandomNumberGenerator::new();
     match rng.roll_dice(1, 6) {
         1 => Box::new(SimpleMapBuilder::new(width, height, depth)),
         2 => Box::new(BSPMapBuilder::new(width, height, depth)),
