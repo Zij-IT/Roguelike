@@ -8,8 +8,8 @@ pub mod colors {
 }
 
 pub mod consoles {
-    pub const HUD_CONSOLE: usize = 0;
-    pub const MAP_CONSOLE: usize = 1;
-    pub const CHAR_CONSOLE: usize = 2;
+    pub const HUD_CONSOLE: usize = 2;
+    pub const CHAR_CONSOLE: usize = 1;
+    pub const MAP_CONSOLE: usize = 0;
     pub const NUM_OF_CONSOLES: usize = 3;
 }

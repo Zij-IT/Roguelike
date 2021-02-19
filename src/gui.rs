@@ -44,8 +44,7 @@ pub fn show_inventory(gs: &mut EcsWorld, ctx: &mut Rltk) -> (ItemMenuResult, Opt
         }
     };
 
-    //
-    ctx.set_active_console(consoles::CHAR_CONSOLE);
+    ctx.set_active_console(consoles::HUD_CONSOLE);
 
     //Base locations
     let base_x = 17;
@@ -133,6 +132,8 @@ pub fn show_targeting(
     let player_pos = gs.world.fetch::<Point>();
     let views = gs.world.read_storage::<Viewshed>();
     let (min_x, max_x, min_y, max_y) = camera::get_screen_bounds(&gs.world);
+
+    ctx.set_active_console(consoles::MAP_CONSOLE);
 
     ctx.print_color(
         5,
@@ -258,7 +259,13 @@ pub enum GameOverResult {
 }
 
 pub fn show_game_over(ctx: &mut Rltk) -> GameOverResult {
-    ctx.cls();
+
+    for i in 0..consoles::NUM_OF_CONSOLES {
+        ctx.set_active_console(i);
+        ctx.cls();
+    }
+
+    ctx.set_active_console(consoles::HUD_CONSOLE);
 
     let lines = [
         "Your journey has ended!",

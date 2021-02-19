@@ -348,8 +348,9 @@ fn main() -> BError {
         .with_fullscreen(true)
         .with_dimensions(80, 60)
         .with_simple_console(80, 60, "cp437_8x8.png") // map
-        .with_simple_console_no_bg(80, 60, "cp437_8x8.png") // characters
-        .with_simple_console_no_bg(80, 60, "cp437_8x8.png") // hud
+        .with_simple_console_no_bg(80, 60, "cp437_8x8.png") // creatures
+        .with_sparse_console(80, 60, "cp437_8x8.png") // hud
+        //.with_simple_console(80, 60, "cp437_8x8.png")//Tooltips and the like
         .with_tile_dimensions(8, 8)
         .build()?;
 
