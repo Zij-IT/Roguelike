@@ -19,6 +19,11 @@ pub fn respond_to_input(gs: &mut EcsWorld, ctx: &mut Rltk) -> RunState {
             VKC::L | VKC::Right => try_move(1, 0, &mut gs.world),
             VKC::K | VKC::Up => try_move(0, -1, &mut gs.world),
             VKC::J | VKC::Down => try_move(0, 1, &mut gs.world),
+            VKC::Z => try_move(-1, -1, &mut gs.world),
+            VKC::U => try_move(1, -1, &mut gs.world),
+            VKC::B => try_move(-1, 1, &mut gs.world),
+            VKC::N => try_move(1, 1, &mut gs.world),
+
             //Item keys
             VKC::G => try_pickup(&mut gs.world),
             VKC::I => return RunState::ShowInventory,
