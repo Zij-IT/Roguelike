@@ -22,6 +22,7 @@ mod spawning;
 use constants::consoles;
 use ecs::*;
 use game_log::GameLog;
+use gui::{MainMenuResult, MainMenuSelection, SettingsMenuResult, SettingsSelection};
 use map_builder::map::Map;
 use player::respond_to_input;
 
@@ -53,6 +54,7 @@ pub enum RunState {
     AwaitingInput,
     GameOver,
     MainMenu(gui::MainMenuSelection),
+    SettingsMenu(gui::SettingsSelection),
     MonsterTurn,
     NextLevel,
     PlayerTurn,
@@ -80,10 +82,12 @@ impl EcsWorld {
         let mut to_delete = entities.join().collect::<Vec<_>>();
         to_delete.retain(|ent| {
             let is_player = *ent == *player_ent;
-            let is_in_player_bag =
-                backpack.get(*ent).map_or(false, |pack| pack.owner == *player_ent);
-            let is_equipped_by_player =
-                equipped_items.get(*ent).map_or(false, |eq| eq.owner == *player_ent);
+            let is_in_player_bag = backpack
+                .get(*ent)
+                .map_or(false, |pack| pack.owner == *player_ent);
+            let is_equipped_by_player = equipped_items
+                .get(*ent)
+                .map_or(false, |eq| eq.owner == *player_ent);
             !is_player && !is_in_player_bag && !is_equipped_by_player
         });
 
@@ -174,8 +178,10 @@ impl GameState for EcsWorld {
         let mut next_state = *self.world.fetch::<RunState>();
 
         //Draw map & characters
-        if !matches!(next_state, RunState::MainMenu(_)) {
-            gui::draw_hud(&self.world, ctx);
+        if !matches!(next_state, RunState::MainMenu(_))
+            && !matches!(next_state, RunState::SettingsMenu(_))
+        {
+            gui::show_hud(&self.world, ctx);
             camera::render(&self.world, ctx);
         }
 
@@ -204,99 +210,71 @@ impl GameState for EcsWorld {
                 self.goto_next_level();
                 next_state = RunState::PreRun;
             }
-            RunState::ShowInventory => {
-                let (item_res, selected_item) = gui::show_inventory(self, ctx);
-                match item_res {
-                    gui::ItemMenuResult::Selected => {
-                        let selected_item = selected_item.unwrap();
-                        if let Some(range) = self.world.read_storage::<Ranged>().get(selected_item)
-                        {
-                            next_state = RunState::ShowTargeting(range.range, selected_item);
-                        } else {
-                            let mut intent = self.world.write_storage::<WantsToUseItem>();
-                            intent
-                                .insert(
-                                    *self.world.fetch::<Entity>(),
-                                    WantsToUseItem {
-                                        item: selected_item,
-                                        target: None,
-                                    },
-                                )
-                                .expect("Unable to insert intent");
-                            next_state = RunState::PlayerTurn;
-                        }
-                    }
-                    gui::ItemMenuResult::Cancel => next_state = RunState::AwaitingInput,
-                    gui::ItemMenuResult::NoResponse => {}
-                }
-            }
-            RunState::ShowDropItem => {
-                let (item_res, selected_item) = gui::show_inventory(self, ctx);
-                match item_res {
-                    gui::ItemMenuResult::Selected => {
-                        let selected_item = selected_item.unwrap();
-                        let mut intent = self.world.write_storage::<WantsToDropItem>();
-                        intent
-                            .insert(
-                                *self.world.fetch::<Entity>(),
-                                WantsToDropItem {
-                                    item: selected_item,
-                                },
-                            )
-                            .expect("Unable to insert intent to drop item");
-                        next_state = RunState::PlayerTurn;
-                    }
-                    gui::ItemMenuResult::Cancel => next_state = RunState::AwaitingInput,
-                    gui::ItemMenuResult::NoResponse => {}
-                }
-            }
-            RunState::ShowRemoveItem => {
-                let (item_res, selected_item) = gui::show_inventory(self, ctx);
-                match item_res {
-                    gui::ItemMenuResult::Selected => {
-                        let selected_item = selected_item.unwrap();
-                        let mut intent = self.world.write_storage::<WantsToRemoveItem>();
-                        intent
-                            .insert(
-                                *self.world.fetch::<Entity>(),
-                                WantsToRemoveItem {
-                                    item: selected_item,
-                                },
-                            )
-                            .expect("Unable to insert intent to remove item");
-                        next_state = RunState::PlayerTurn;
-                    }
-                    gui::ItemMenuResult::Cancel => next_state = RunState::AwaitingInput,
-                    gui::ItemMenuResult::NoResponse => {}
-                }
-            }
-            RunState::ShowTargeting(range, item) => {
-                let (item_res, target) = gui::show_targeting(self, ctx, range);
-                match item_res {
-                    gui::ItemMenuResult::Selected => {
+            RunState::ShowInventory => match gui::show_inventory(self, ctx) {
+                gui::ItemMenuResult::Selected(item) => {
+                    if let Some(range) = self.world.read_storage::<Ranged>().get(item) {
+                        next_state = RunState::ShowTargeting(range.range, item);
+                    } else {
                         let mut intent = self.world.write_storage::<WantsToUseItem>();
                         intent
                             .insert(
                                 *self.world.fetch::<Entity>(),
-                                WantsToUseItem { item, target },
+                                WantsToUseItem { item, target: None },
                             )
                             .expect("Unable to insert intent");
                         next_state = RunState::PlayerTurn;
                     }
-                    gui::ItemMenuResult::Cancel => next_state = RunState::AwaitingInput,
-                    gui::ItemMenuResult::NoResponse => {}
                 }
-            }
-            RunState::MainMenu(_) => match gui::draw_main_menu(self, ctx) {
-                gui::MainMenuResult::NoSelection(prev_option) => {
-                    next_state = RunState::MainMenu(prev_option)
+                gui::ItemMenuResult::Cancel => next_state = RunState::AwaitingInput,
+                gui::ItemMenuResult::NoResponse => {}
+            },
+            RunState::ShowDropItem => match gui::show_inventory(self, ctx) {
+                gui::ItemMenuResult::Selected(item) => {
+                    let mut intent = self.world.write_storage::<WantsToDropItem>();
+                    intent
+                        .insert(*self.world.fetch::<Entity>(), WantsToDropItem { item })
+                        .expect("Unable to insert intent to drop item");
+                    next_state = RunState::PlayerTurn;
                 }
-                gui::MainMenuResult::Selection(option) => match option {
-                    gui::MainMenuSelection::NewGame => {
+                gui::ItemMenuResult::Cancel => next_state = RunState::AwaitingInput,
+                gui::ItemMenuResult::NoResponse => {}
+            },
+            RunState::ShowRemoveItem => match gui::show_inventory(self, ctx) {
+                gui::ItemMenuResult::Selected(item) => {
+                    let mut intent = self.world.write_storage::<WantsToRemoveItem>();
+                    intent
+                        .insert(*self.world.fetch::<Entity>(), WantsToRemoveItem { item })
+                        .expect("Unable to insert intent to remove item");
+                    next_state = RunState::PlayerTurn;
+                }
+                gui::ItemMenuResult::Cancel => next_state = RunState::AwaitingInput,
+                gui::ItemMenuResult::NoResponse => {}
+            },
+            RunState::ShowTargeting(range, item) => match gui::show_targeting(self, ctx, range) {
+                gui::TargetResult::Selected(target) => {
+                    let mut intent = self.world.write_storage::<WantsToUseItem>();
+                    intent
+                        .insert(
+                            *self.world.fetch::<Entity>(),
+                            WantsToUseItem {
+                                item,
+                                target: Some(target),
+                            },
+                        )
+                        .expect("Unable to insert intent");
+                    next_state = RunState::PlayerTurn;
+                }
+                gui::TargetResult::Cancel => next_state = RunState::AwaitingInput,
+                gui::TargetResult::NoResponse => {}
+            },
+            RunState::MainMenu(_) => match gui::show_main_menu(&mut self.world, ctx) {
+                MainMenuResult::NoSelection(option) => next_state = RunState::MainMenu(option),
+                MainMenuResult::Selection(option) => match option {
+                    MainMenuSelection::NewGame => {
                         self.game_over_cleanup();
                         next_state = RunState::PreRun;
                     }
-                    gui::MainMenuSelection::LoadGame => {
+                    MainMenuSelection::LoadGame => {
                         if save_load_util::does_save_exist() {
                             save_load_util::load_game(&mut self.world);
                             next_state = RunState::AwaitingInput;
@@ -305,7 +283,32 @@ impl GameState for EcsWorld {
                             next_state = RunState::MainMenu(option);
                         }
                     }
-                    gui::MainMenuSelection::Quit => std::process::exit(0),
+                    MainMenuSelection::Settings => {
+                        next_state = RunState::SettingsMenu(SettingsSelection::Audio)
+                    }
+                    MainMenuSelection::Quit => std::process::exit(0),
+                },
+            },
+            RunState::SettingsMenu(_) => match gui::show_settings_menu(&mut self.world, ctx) {
+                SettingsMenuResult::NoSelection(option) => {
+                    next_state = RunState::SettingsMenu(option)
+                }
+                SettingsMenuResult::Selection(option) => match option {
+                    SettingsSelection::Audio => {
+                        todo!()
+                    }
+                    SettingsSelection::Visual => {
+                        todo!()
+                    }
+                    SettingsSelection::Keybindings => {
+                        todo!()
+                    }
+                    SettingsSelection::Accessibility => {
+                        todo!()
+                    }
+                    SettingsSelection::Back => {
+                        next_state = RunState::MainMenu(MainMenuSelection::Settings)
+                    }
                 },
             },
             RunState::GameOver => {

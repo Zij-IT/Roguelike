@@ -1,7 +1,11 @@
 use super::random_table::RandomTable;
 use crate::{
     constants::colors,
-    ecs::components::{AreaOfEffect, BlocksTile, CombatStats, Consumable, DefenseBonus, Equipable, EquipmentSlot, InflictsDamage, Item, MeleeDamageBonus, Monster, Name, Player, Position, ProvidesHealing, Ranged, Render, SerializeMe, Viewshed},
+    ecs::components::{
+        AreaOfEffect, BlocksTile, CombatStats, Consumable, DefenseBonus, Equipable, EquipmentSlot,
+        InflictsDamage, Item, MeleeDamageBonus, Monster, Name, Player, Position, ProvidesHealing,
+        Ranged, Render, SerializeMe, Viewshed,
+    },
     map_builder::{
         map::{Map, TileType},
         rect::Rect,

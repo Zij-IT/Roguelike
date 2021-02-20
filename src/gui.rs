@@ -4,8 +4,10 @@ use super::{
 };
 use rltk::{Point, Rltk, VirtualKeyCode, RGB};
 use specs::prelude::*;
+use std::convert::AsRef;
+use strum::{AsRefStr, EnumIter, IntoEnumIterator};
 
-pub fn draw_hud(ecs: &World, ctx: &mut Rltk) {
+pub fn show_hud(ecs: &World, ctx: &mut Rltk) {
     let assets = ecs.fetch::<rex_assets::RexAssets>();
     ctx.set_active_console(consoles::HUD_CONSOLE);
     ctx.render_xp_sprite(&assets.blank_ui, 0, 0);
@@ -15,10 +17,10 @@ pub fn draw_hud(ecs: &World, ctx: &mut Rltk) {
 pub enum ItemMenuResult {
     Cancel,
     NoResponse,
-    Selected,
+    Selected(Entity),
 }
 
-pub fn show_inventory(gs: &mut EcsWorld, ctx: &mut Rltk) -> (ItemMenuResult, Option<Entity>) {
+pub fn show_inventory(gs: &mut EcsWorld, ctx: &mut Rltk) -> ItemMenuResult {
     let player_ent = gs.world.fetch::<Entity>();
     let current_state = gs.world.fetch::<RunState>();
     let names = gs.world.read_storage::<Name>();
@@ -75,26 +77,26 @@ pub fn show_inventory(gs: &mut EcsWorld, ctx: &mut Rltk) -> (ItemMenuResult, Opt
 
     //Respond to players response
     match ctx.key {
-        Some(VirtualKeyCode::Escape) => (ItemMenuResult::Cancel, None),
+        Some(VirtualKeyCode::Escape) => ItemMenuResult::Cancel,
         Some(key) => {
             let selection = rltk::letter_to_option(key);
             if selection > -1 && selection < relevant_entities.len() as i32 {
-                return (
-                    ItemMenuResult::Selected,
-                    Some(relevant_entities[selection as usize].1),
-                );
+                return ItemMenuResult::Selected(relevant_entities[selection as usize].1);
             }
-            (ItemMenuResult::NoResponse, None)
+            ItemMenuResult::NoResponse
         }
-        _ => (ItemMenuResult::NoResponse, None),
+        _ => ItemMenuResult::NoResponse,
     }
 }
 
-pub fn show_targeting(
-    gs: &mut EcsWorld,
-    ctx: &mut Rltk,
-    range: i32,
-) -> (ItemMenuResult, Option<Point>) {
+#[derive(PartialEq, Copy, Clone)]
+pub enum TargetResult {
+    Cancel,
+    NoResponse,
+    Selected(Point),
+}
+
+pub fn show_targeting(gs: &mut EcsWorld, ctx: &mut Rltk, range: i32) -> TargetResult {
     let player_ent = gs.world.fetch::<Entity>();
     let player_pos = gs.world.fetch::<Point>();
     let views = gs.world.read_storage::<Viewshed>();
@@ -128,7 +130,7 @@ pub fn show_targeting(
             }
         }
     } else {
-        return (ItemMenuResult::Cancel, None);
+        return TargetResult::Cancel;
     }
 
     //Draw Cursor
@@ -140,58 +142,56 @@ pub fn show_targeting(
             .any(|tile| tile.x == mouse_pos.0 && tile.y == mouse_pos.1)
         {
             ctx.set_bg(true_mouse_pos.0, true_mouse_pos.1, RGB::named(rltk::CYAN));
-            (
-                ItemMenuResult::Selected,
-                Some(Point::new(mouse_pos.0, mouse_pos.1)),
-            )
+            TargetResult::Selected(Point::new(mouse_pos.0, mouse_pos.1))
         } else {
             ctx.set_bg(true_mouse_pos.0, true_mouse_pos.1, RGB::named(rltk::RED));
-            (ItemMenuResult::Cancel, None)
+            TargetResult::Cancel
         };
     }
     if let Some(VirtualKeyCode::Escape) = ctx.key {
-        return (ItemMenuResult::Cancel, None);
+        return TargetResult::Cancel;
     }
 
-    (ItemMenuResult::NoResponse, None)
+    TargetResult::NoResponse
 }
 
-#[derive(PartialEq, Copy, Clone, Debug)]
+//Main Menu related
+#[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr)]
 pub enum MainMenuSelection {
-    NewGame = 0,
+    #[strum(serialize = "Start Anew")]
+    NewGame,
+    #[strum(serialize = "Continue")]
     LoadGame,
+    Settings,
     Quit,
 }
 
-#[derive(PartialEq, Copy, Clone, Debug)]
 pub enum MainMenuResult {
     NoSelection(MainMenuSelection),
     Selection(MainMenuSelection),
 }
 
-pub fn draw_main_menu(gs: &mut EcsWorld, ctx: &mut Rltk) -> MainMenuResult {
-    let assets = gs.world.fetch::<rex_assets::RexAssets>();
-    ctx.set_active_console(consoles::HUD_CONSOLE);
-    ctx.render_xp_sprite(&assets.title_screen, 0, 0);
+pub fn show_main_menu(world: &mut World, ctx: &mut Rltk) -> MainMenuResult {
+    if let RunState::MainMenu(current_selection) = *world.fetch::<RunState>() {
+        let assets = world.fetch::<rex_assets::RexAssets>();
+        ctx.set_active_console(consoles::HUD_CONSOLE);
+        ctx.render_xp_sprite(&assets.title_screen, 0, 0);
 
-    if let RunState::MainMenu(current_selection) = *gs.world.fetch::<RunState>() {
         let selected = RGB::named(rltk::YELLOW);
-
-        let main_menu_options = ["Begin New Game", "Load Game", "Quit"];
 
         let base_y = 45;
         let step = 2;
 
-        for (index, option) in main_menu_options.iter().enumerate() {
+        for (index, option) in MainMenuSelection::iter().enumerate() {
             ctx.print_color_centered(
                 base_y + step * index,
-                if main_menu_options[(current_selection as usize)] == *option {
+                if current_selection == option {
                     selected
                 } else {
                     RGB::from(colors::FOREGROUND)
                 },
                 RGB::from(colors::BACKGROUND),
-                option,
+                option.as_ref(),
             );
         }
 
@@ -201,14 +201,16 @@ pub fn draw_main_menu(gs: &mut EcsWorld, ctx: &mut Rltk) -> MainMenuResult {
                 let new_selection = match current_selection {
                     MainMenuSelection::NewGame => MainMenuSelection::Quit,
                     MainMenuSelection::LoadGame => MainMenuSelection::NewGame,
-                    MainMenuSelection::Quit => MainMenuSelection::LoadGame,
+                    MainMenuSelection::Settings => MainMenuSelection::LoadGame,
+                    MainMenuSelection::Quit => MainMenuSelection::Settings,
                 };
                 MainMenuResult::NoSelection(new_selection)
             }
             Some(VirtualKeyCode::Down) => {
                 let new_selection = match current_selection {
                     MainMenuSelection::NewGame => MainMenuSelection::LoadGame,
-                    MainMenuSelection::LoadGame => MainMenuSelection::Quit,
+                    MainMenuSelection::LoadGame => MainMenuSelection::Settings,
+                    MainMenuSelection::Settings => MainMenuSelection::Quit,
                     MainMenuSelection::Quit => MainMenuSelection::NewGame,
                 };
                 MainMenuResult::NoSelection(new_selection)
@@ -216,12 +218,86 @@ pub fn draw_main_menu(gs: &mut EcsWorld, ctx: &mut Rltk) -> MainMenuResult {
             _ => MainMenuResult::NoSelection(current_selection),
         };
     }
+
     MainMenuResult::NoSelection(MainMenuSelection::NewGame)
 }
 
+//Settings related
+#[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr)]
+pub enum SettingsSelection {
+    Audio,
+    Visual,
+    Keybindings,
+    Accessibility,
+    Back,
+}
+
+pub enum SettingsMenuResult {
+    NoSelection(SettingsSelection),
+    Selection(SettingsSelection),
+}
+
+pub fn show_settings_menu(world: &mut World, ctx: &mut Rltk) -> SettingsMenuResult {
+    if let RunState::SettingsMenu(current_selection) = *world.fetch::<RunState>() {
+        let assets = world.fetch::<rex_assets::RexAssets>();
+        ctx.set_active_console(consoles::HUD_CONSOLE);
+        ctx.render_xp_sprite(&assets.blank_settings, 0, 0);
+
+        let selected = RGB::named(rltk::YELLOW);
+
+        let base_y = 3;
+        let step = 2;
+
+        for (index, option) in SettingsSelection::iter().enumerate() {
+            if option != SettingsSelection::Back {
+                ctx.print_color(
+                    2,
+                    base_y + step * index,
+                    if current_selection == option {
+                        selected
+                    } else {
+                        RGB::from(colors::FOREGROUND)
+                    },
+                    RGB::from(colors::BACKGROUND),
+                    option.as_ref(),
+                );
+            }
+        }
+
+        return match ctx.key {
+            Some(VirtualKeyCode::Return) => SettingsMenuResult::Selection(current_selection),
+            Some(VirtualKeyCode::Down) => {
+                let new_selection = match current_selection {
+                    SettingsSelection::Audio => SettingsSelection::Visual,
+                    SettingsSelection::Visual => SettingsSelection::Keybindings,
+                    SettingsSelection::Keybindings => SettingsSelection::Accessibility,
+                    SettingsSelection::Accessibility => SettingsSelection::Audio,
+                    SettingsSelection::Back => unreachable!(),
+                };
+                SettingsMenuResult::NoSelection(new_selection)
+            }
+            Some(VirtualKeyCode::Up) => {
+                let new_selection = match current_selection {
+                    SettingsSelection::Audio => SettingsSelection::Accessibility,
+                    SettingsSelection::Visual => SettingsSelection::Audio,
+                    SettingsSelection::Keybindings => SettingsSelection::Visual,
+                    SettingsSelection::Accessibility => SettingsSelection::Keybindings,
+                    SettingsSelection::Back => unreachable!(),
+                };
+                SettingsMenuResult::NoSelection(new_selection)
+            }
+            Some(VirtualKeyCode::Escape) => SettingsMenuResult::Selection(SettingsSelection::Back),
+            _ => SettingsMenuResult::NoSelection(current_selection),
+        };
+    }
+
+    SettingsMenuResult::NoSelection(SettingsSelection::iter().next().unwrap())
+}
+
+//Game over related
 #[derive(PartialEq, Copy, Clone)]
 pub enum GameOverResult {
-    NoSelection,
+    NoResponse,
     QuitToMenu,
 }
 
@@ -252,7 +328,7 @@ pub fn show_game_over(ctx: &mut Rltk) -> GameOverResult {
     }
 
     match ctx.key {
-        None => GameOverResult::NoSelection,
+        None => GameOverResult::NoResponse,
         Some(_) => GameOverResult::QuitToMenu,
     }
 }
