@@ -35,7 +35,7 @@ pub fn cull_dead_characters(ecs: &mut World) {
                     None => {
                         dead.push(entity);
                         if let Some(name) = names.get(entity) {
-                            log.push(format!("{} is dead", &name.name));
+                            log.push(&format!("{} is dead", &name.name));
                         }
                     }
                     Some(_) => {

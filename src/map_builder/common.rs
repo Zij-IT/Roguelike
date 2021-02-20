@@ -50,7 +50,7 @@ pub fn gen_voronoi_regions(
                 let cell_value_i = cell_value_f as i32;
                 noise_areas
                     .entry(cell_value_i)
-                    .or_insert(vec![])
+                    .or_insert_with(Vec::new)
                     .push((x, y));
             }
         }

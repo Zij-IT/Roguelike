@@ -30,7 +30,7 @@ impl<'a> System<'a> for VisibilitySystem {
                     for idx in 0..map.tile_status.len() {
                         map.remove_tile_status(idx, TileStatus::Visible);
                     }
-                    for vis in view.visible_tiles.iter() {
+                    for vis in &view.visible_tiles {
                         let idx = map.xy_idx(vis.x, vis.y);
                         map.set_tile_status(idx, TileStatus::Revealed);
                         map.set_tile_status(idx, TileStatus::Visible);

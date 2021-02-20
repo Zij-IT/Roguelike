@@ -1,3 +1,7 @@
+#![deny(rust_2018_idioms, clippy::perf, clippy::style, clippy::nursery)]
+//I would also use clippy::pedantic, but I convert between usize and i32 so much that 80+ errors
+//were enough to make me not. I cleaned the large majority of the non-conversion errors though
+
 //External includes
 use rltk::prelude::*;
 use specs::prelude::*;
@@ -19,7 +23,7 @@ use constants::consoles;
 use ecs::*;
 use game_log::GameLog;
 use map_builder::map::Map;
-use player::player_input;
+use player::respond_to_input;
 
 //Macros
 ///Given a specs::World, and a list of components, it registers all components in the world
@@ -76,20 +80,10 @@ impl EcsWorld {
         let mut to_delete = entities.join().collect::<Vec<_>>();
         to_delete.retain(|ent| {
             let is_player = *ent == *player_ent;
-            let is_in_player_bag = {
-                if let Some(pack) = backpack.get(*ent) {
-                    pack.owner == *player_ent
-                } else {
-                    false
-                }
-            };
-            let is_equipped_by_player = {
-                if let Some(eq) = equipped_items.get(*ent) {
-                    eq.owner == *player_ent
-                } else {
-                    false
-                }
-            };
+            let is_in_player_bag =
+                backpack.get(*ent).map_or(false, |pack| pack.owner == *player_ent);
+            let is_equipped_by_player =
+                equipped_items.get(*ent).map_or(false, |eq| eq.owner == *player_ent);
             !is_player && !is_in_player_bag && !is_equipped_by_player
         });
 
@@ -113,7 +107,7 @@ impl EcsWorld {
         //Notify player and heal player
         let player_ent = self.world.fetch::<Entity>();
         let mut logs = self.world.fetch_mut::<GameLog>();
-        logs.push("You descend to the next level.");
+        logs.push(&"You descend to the next level.");
         let mut all_stats = self.world.write_storage::<CombatStats>();
         if let Some(player_stats) = all_stats.get_mut(*player_ent) {
             player_stats.hp = i32::max(player_stats.hp, player_stats.max_hp / 2);
@@ -128,7 +122,7 @@ impl EcsWorld {
         //Add starting message
         let mut logs = self.world.write_resource::<GameLog>();
         logs.clear();
-        logs.push("Welcome to my Roguelike!");
+        logs.push(&"Welcome to my Roguelike!");
         std::mem::drop(logs);
 
         //Create new player resource
@@ -140,23 +134,21 @@ impl EcsWorld {
         self.generate_world_map(1);
     }
 
-    ///Generates a new level using random_builder with the specified depth
+    ///Generates a new level using `random_builder` with the specified depth
     fn generate_world_map(&mut self, new_depth: i32) {
         let mut builder = map_builder::random_builder(MAP_WIDTH, MAP_HEIGHT, new_depth);
         builder.build_map();
-        {
-            let mut world = self.world.write_resource::<Map>();
-            *world = builder.get_map();
-        }
-
+        self.world.insert(builder.get_map());
         builder.spawn_entities(&mut self.world);
 
         //Updates the players position based on the new map generated
         //Also must update the player component, and the player pos resource
-        let player_start = builder.get_starting_position();
-        let (player_x, player_y) = (player_start.x, player_start.y);
-        let mut player_position = self.world.write_resource::<Point>();
-        *player_position = Point::new(player_x, player_y);
+        let Position {
+            x: player_x,
+            y: player_y,
+        } = builder.get_starting_position();
+        self.world.insert(Point::new(player_x, player_y));
+
         let mut position_components = self.world.write_storage::<Position>();
         let player_ent = self.world.fetch::<Entity>();
         if let Some(player_pos_comp) = position_components.get_mut(*player_ent) {
@@ -173,7 +165,6 @@ impl EcsWorld {
 
 impl GameState for EcsWorld {
     fn tick(&mut self, ctx: &mut Rltk) {
-        //Clear all consoles
         for i in 0..consoles::NUM_OF_CONSOLES {
             ctx.set_active_console(i);
             ctx.cls();
@@ -182,23 +173,20 @@ impl GameState for EcsWorld {
         ecs::cull_dead_particles(&mut self.world, ctx.frame_time_ms);
         let mut next_state = *self.world.fetch::<RunState>();
 
-        //Draw map & renderables
-        match next_state {
-            RunState::MainMenu(_) => {}
-            _ => {
-                gui::draw_hud(&self.world, ctx);
-                camera::render_camera(&self.world, ctx);
-            }
+        //Draw map & characters
+        if !matches!(next_state, RunState::MainMenu(_)) {
+            gui::draw_hud(&self.world, ctx);
+            camera::render(&self.world, ctx);
         }
 
         //Calculates next state based on current state
         match next_state {
             RunState::PreRun => {
-                ecs::input_systems::execute(&mut self.world);
+                ecs::pre_run_systems::execute(&mut self.world);
                 next_state = RunState::AwaitingInput;
             }
             RunState::AwaitingInput => {
-                next_state = player_input(self, ctx);
+                next_state = respond_to_input(self, ctx);
             }
             RunState::PlayerTurn => {
                 ecs::all_systems::execute(&mut self.world);
@@ -331,7 +319,6 @@ impl GameState for EcsWorld {
         //Replace RunState with the new one
         self.world.insert::<RunState>(next_state);
         ecs::cull_dead_characters(&mut self.world);
-        render_draw_buffer(ctx).expect("Error rendering draw buffer");
     }
 }
 

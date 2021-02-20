@@ -3,6 +3,8 @@ name = "roguelike"
 version = "0.1.0"
 authors = ["Zij-IT <elijah.reed@hartvigsen.xyz>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Zij-IT/Roguelike"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

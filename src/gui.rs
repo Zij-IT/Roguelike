@@ -46,50 +46,16 @@ pub fn show_inventory(gs: &mut EcsWorld, ctx: &mut Rltk) -> (ItemMenuResult, Opt
     };
 
     ctx.set_active_console(consoles::HUD_CONSOLE);
+    let assets = gs.world.fetch::<rex_assets::RexAssets>();
+    ctx.render_xp_sprite(&assets.blank_inv, 0, 0);
 
     //Base locations
-    let base_x = 17;
-    let base_y = (25 - (relevant_entities.len() / 2)) as i32;
-
-    //Draw UI BOX
-    ctx.draw_box(
-        base_x - 2,
-        base_y - 2,
-        31,
-        (relevant_entities.len() + 3) as i32,
-        RGB::from(colors::FOREGROUND),
-        RGB::from(colors::BACKGROUND),
-    );
-    ctx.print_color(
-        base_x + 1,
-        base_y - 2,
-        RGB::named(rltk::YELLOW),
-        RGB::from(colors::BACKGROUND),
-        match *current_state {
-            RunState::ShowRemoveItem => "Remove What?",
-            RunState::ShowDropItem => "Drop What?",
-            RunState::ShowInventory => "Inventory",
-            _ => unreachable!(),
-        },
-    );
-    ctx.print_color(
-        base_x + 1,
-        base_y + relevant_entities.len() as i32 + 1,
-        RGB::named(rltk::YELLOW),
-        RGB::from(colors::BACKGROUND),
-        "ESC to cancel",
-    );
+    let base_x = 3;
+    let base_y = 4;
 
     //Print out relevant items
     for (offset, (name, _)) in relevant_entities.iter().enumerate() {
         let y = base_y + offset as i32;
-        ctx.set(
-            base_x,
-            y,
-            RGB::from(colors::FOREGROUND),
-            RGB::from(colors::BACKGROUND),
-            rltk::to_cp437('('),
-        );
         ctx.set(
             base_x + 1,
             y,
@@ -146,7 +112,7 @@ pub fn show_targeting(
 
     let mut available_cells = Vec::new();
     if let Some(visible) = views.get(*player_ent) {
-        for idx in visible.visible_tiles.iter() {
+        for idx in &visible.visible_tiles {
             let distance = rltk::DistanceAlg::Pythagoras.distance2d(*player_pos, *idx);
             if distance < range as f32 {
                 let screen_x = idx.x - min_x;

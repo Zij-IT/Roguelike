@@ -6,14 +6,14 @@ pub struct RandomTable {
 }
 
 impl RandomTable {
-    pub fn new() -> RandomTable {
-        RandomTable {
+    pub const fn new() -> Self {
+        Self {
             entries: Vec::new(),
             total_weight: 0,
         }
     }
 
-    pub fn insert<StrType: ToString>(mut self, name: StrType, weight: i32) -> RandomTable {
+    pub fn insert<S: ToString + std::fmt::Display>(mut self, name: &S, weight: i32) -> Self {
         if weight > 0 {
             self.total_weight += weight;
             self.entries.push(RandomEntry::new(name, weight));
@@ -46,8 +46,8 @@ struct RandomEntry {
 }
 
 impl RandomEntry {
-    pub fn new<StrType: ToString>(name: StrType, weight: i32) -> RandomEntry {
-        RandomEntry {
+    pub fn new<S: ToString + std::fmt::Display>(name: &S, weight: i32) -> Self {
+        Self {
             name: name.to_string(),
             weight,
         }

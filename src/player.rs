@@ -8,19 +8,19 @@ use crate::map_builder::map::{Map, TileStatus, TileType};
 use rltk::{Point, Rltk, VirtualKeyCode as VKC};
 use specs::{Entity, Join, World, WorldExt};
 
-pub fn player_input(gs: &mut EcsWorld, ctx: &mut Rltk) -> RunState {
+pub fn respond_to_input(gs: &mut EcsWorld, ctx: &mut Rltk) -> RunState {
     match ctx.key {
         None => {
             return RunState::AwaitingInput;
         }
         Some(key) => match key {
             //Movement keys
-            VKC::H | VKC::Left => try_move_player(-1, 0, &mut gs.world),
-            VKC::L | VKC::Right => try_move_player(1, 0, &mut gs.world),
-            VKC::K | VKC::Up => try_move_player(0, -1, &mut gs.world),
-            VKC::J | VKC::Down => try_move_player(0, 1, &mut gs.world),
+            VKC::H | VKC::Left => try_move(-1, 0, &mut gs.world),
+            VKC::L | VKC::Right => try_move(1, 0, &mut gs.world),
+            VKC::K | VKC::Up => try_move(0, -1, &mut gs.world),
+            VKC::J | VKC::Down => try_move(0, 1, &mut gs.world),
             //Item keys
-            VKC::G => get_item(&mut gs.world),
+            VKC::G => try_pickup(&mut gs.world),
             VKC::I => return RunState::ShowInventory,
             VKC::D => return RunState::ShowDropItem,
             VKC::R => return RunState::ShowRemoveItem,
@@ -29,11 +29,7 @@ pub fn player_input(gs: &mut EcsWorld, ctx: &mut Rltk) -> RunState {
             //Skip key
             VKC::Space => return skip_turn(&mut gs.world),
             //Descend Key
-            VKC::Period => {
-                if try_next_level(&mut gs.world) {
-                    return RunState::NextLevel;
-                }
-            }
+            VKC::Period => return try_descend(&mut gs.world),
             //Ignore others
             _ => {
                 return RunState::AwaitingInput;
@@ -43,7 +39,7 @@ pub fn player_input(gs: &mut EcsWorld, ctx: &mut Rltk) -> RunState {
     RunState::PlayerTurn
 }
 
-fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
+fn try_move(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let mut positions = ecs.write_storage::<Position>();
     let mut viewsheds = ecs.write_storage::<Viewshed>();
     let mut players = ecs.write_storage::<Player>();
@@ -57,6 +53,7 @@ fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     for (entity, _, pos, viewshed) in
         (&entities, &mut players, &mut positions, &mut viewsheds).join()
     {
+        //Check bounds
         if pos.x + delta_x < 1
             || pos.x + delta_x > map.width - 1
             || pos.y + delta_y < 1
@@ -65,8 +62,9 @@ fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
             return;
         }
 
+        //Attack if possible
         let destination_idx = map.xy_idx(pos.x + delta_x, pos.y + delta_y);
-        for potential_target in map.tile_content[destination_idx].iter() {
+        for potential_target in &map.tile_content[destination_idx] {
             if combat_stats.get(*potential_target).is_some() {
                 attacks
                     .insert(
@@ -84,15 +82,15 @@ fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
         if !map.is_tile_status_set(destination_idx, TileStatus::Blocked) {
             pos.x = std::cmp::min(map.width - 1, std::cmp::max(0, pos.x + delta_x));
             pos.y = std::cmp::min(map.height - 1, std::cmp::max(0, pos.y + delta_y));
-            let mut ppos = ecs.write_resource::<Point>();
-            ppos.x = pos.x;
-            ppos.y = pos.y;
+            let mut player_pos = ecs.write_resource::<Point>();
+            player_pos.x = pos.x;
+            player_pos.y = pos.y;
             viewshed.is_dirty = true;
         }
     }
 }
 
-fn get_item(ecs: &mut World) {
+fn try_pickup(ecs: &mut World) {
     let entities = ecs.entities();
     let items = ecs.read_storage::<Item>();
     let player_ent = ecs.fetch::<Entity>();
@@ -108,7 +106,7 @@ fn get_item(ecs: &mut World) {
     }
 
     match target_item {
-        None => logs.push("There is nothing to pick up"),
+        None => logs.push(&"There is nothing to pick up"),
         Some(item) => {
             let mut pickup = ecs.write_storage::<WantsToPickupItem>();
             pickup
@@ -124,16 +122,16 @@ fn get_item(ecs: &mut World) {
     }
 }
 
-fn try_next_level(ecs: &mut World) -> bool {
+fn try_descend(ecs: &mut World) -> RunState {
     let player_pos = ecs.fetch::<Point>();
     let map = ecs.fetch::<Map>();
     let player_idx = map.xy_idx(player_pos.x, player_pos.y);
     if map.tiles[player_idx] == TileType::StairsDown {
-        true
+        RunState::NextLevel
     } else {
         let mut logs = ecs.fetch_mut::<GameLog>();
-        logs.push("There is no way down from here.");
-        false
+        logs.push(&"There is no way down from here.");
+        RunState::AwaitingInput
     }
 }
 

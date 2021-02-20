@@ -15,8 +15,8 @@ pub struct MazeBuilder {
 }
 
 impl MazeBuilder {
-    pub fn new(width: i32, height: i32, new_depth: i32) -> MazeBuilder {
-        MazeBuilder {
+    pub fn new(width: i32, height: i32, new_depth: i32) -> Self {
+        Self {
             map: Map::new(width, height, new_depth),
             starting_position: Position { x: 0, y: 0 },
             noise_areas: HashMap::new(),
@@ -49,7 +49,7 @@ impl MapBuilder for MazeBuilder {
     }
 
     fn spawn_entities(&mut self, ecs: &mut World) {
-        for area in self.noise_areas.iter() {
+        for area in &self.noise_areas {
             spawning::spawn_region(ecs, area.1, self.map.depth);
         }
     }
@@ -79,8 +79,8 @@ struct Grid<'a> {
 }
 
 impl<'a> Grid<'a> {
-    pub fn new(width: i32, height: i32, rng: &mut RandomNumberGenerator) -> Grid {
-        Grid {
+    pub fn new(width: i32, height: i32, rng: &'a mut RandomNumberGenerator) -> Self {
+        Self {
             width,
             height,
             cells: vec![0b1111; (width * height) as usize], //0b1111 represents a cell that has all four walls
@@ -114,10 +114,10 @@ impl<'a> Grid<'a> {
                     max_idx as i32 / self.width,
                 );
                 current = next;
-            } else if !self.backtrace.is_empty() {
-                current = self.backtrace.remove(0);
-            } else {
+            } else if self.backtrace.is_empty() {
                 break;
+            } else {
+                current = self.backtrace.remove(0);
             }
         }
         self.copy_to_map(&mut generator.map);
@@ -128,11 +128,9 @@ impl<'a> Grid<'a> {
         if !neighbors.is_empty() {
             if neighbors.len() == 1 {
                 return Some(neighbors[0]);
-            } else {
-                return Some(
-                    neighbors[(self.rng.roll_dice(1, neighbors.len() as i32) - 1) as usize],
-                );
             }
+
+            return Some(neighbors[(self.rng.roll_dice(1, neighbors.len() as i32) - 1) as usize]);
         }
         None
     }
@@ -148,10 +146,10 @@ impl<'a> Grid<'a> {
             (col, row + 1),
         ];
 
-        for neighbor in neighbor_indices.iter() {
+        for neighbor in &neighbor_indices {
             if self.in_bounds(*neighbor) {
                 let neigh_idx = (neighbor.0 + self.width * neighbor.1) as usize;
-                if !Self::is_cell_status_set(&self.cells[neigh_idx], CellStatus::BeenVisited) {
+                if !Self::is_cell_status_set(self.cells[neigh_idx], CellStatus::BeenVisited) {
                     neighbors.push(neigh_idx);
                 }
             }
@@ -159,7 +157,7 @@ impl<'a> Grid<'a> {
         neighbors
     }
 
-    fn in_bounds(&self, (x, y): (i32, i32)) -> bool {
+    const fn in_bounds(&self, (x, y): (i32, i32)) -> bool {
         x >= 0 && y >= 0 && x < self.width && y < self.height
     }
 
@@ -172,16 +170,16 @@ impl<'a> Grid<'a> {
             let map_idx = map.xy_idx(x * 2, y * 2);
 
             map.tiles[map_idx] = TileType::Floor;
-            if !Self::is_cell_status_set(cell, CellStatus::LeftWall) {
+            if !Self::is_cell_status_set(*cell, CellStatus::LeftWall) {
                 map.tiles[map_idx - 1] = TileType::Floor;
             }
-            if !Self::is_cell_status_set(cell, CellStatus::RightWall) {
+            if !Self::is_cell_status_set(*cell, CellStatus::RightWall) {
                 map.tiles[map_idx + 1] = TileType::Floor;
             }
-            if !Self::is_cell_status_set(cell, CellStatus::TopWall) {
+            if !Self::is_cell_status_set(*cell, CellStatus::TopWall) {
                 map.tiles[map_idx - map.width as usize] = TileType::Floor;
             }
-            if !Self::is_cell_status_set(cell, CellStatus::BottomWall) {
+            if !Self::is_cell_status_set(*cell, CellStatus::BottomWall) {
                 map.tiles[map_idx + map.width as usize] = TileType::Floor;
             }
         }
@@ -222,8 +220,8 @@ impl<'a> Grid<'a> {
         }
     }
 
-    fn is_cell_status_set(cell: &u8, status: CellStatus) -> bool {
-        (*cell & (1 << status as u8)) != 0
+    const fn is_cell_status_set(cell: u8, status: CellStatus) -> bool {
+        (cell & (1 << status as u8)) != 0
     }
 
     fn set_cell_status(cell: &mut u8, status: CellStatus) {

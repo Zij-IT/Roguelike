@@ -1,7 +1,7 @@
 use super::random_table::RandomTable;
 use crate::{
     constants::colors,
-    ecs::components::*,
+    ecs::components::{AreaOfEffect, BlocksTile, CombatStats, Consumable, DefenseBonus, Equipable, EquipmentSlot, InflictsDamage, Item, MeleeDamageBonus, Monster, Name, Player, Position, ProvidesHealing, Ranged, Render, SerializeMe, Viewshed},
     map_builder::{
         map::{Map, TileType},
         rect::Rect,
@@ -46,7 +46,7 @@ pub fn spawn_region(ecs: &mut World, area: &[(i32, i32)], map_depth: i32) {
 
     for _ in 0..num_spawns {
         let array_index = if areas.len() == 1 {
-            0usize
+            0_usize
         } else {
             (rng.roll_dice(1, areas.len() as i32) - 1) as usize
         };
@@ -58,7 +58,7 @@ pub fn spawn_region(ecs: &mut World, area: &[(i32, i32)], map_depth: i32) {
     }
 
     std::mem::drop(rng);
-    for spawn in spawn_points.iter() {
+    for spawn in &spawn_points {
         spawn_named_entity(ecs, &spawn);
     }
 }
@@ -93,13 +93,13 @@ pub fn spawn_player(ecs: &mut World, x: i32, y: i32) -> Entity {
 //Private Functions----
 fn create_room_table(map_depth: i32) -> RandomTable {
     RandomTable::new()
-        .insert("Goblin", 9 + map_depth)
-        .insert("Kobold", 3)
-        .insert("HealthPotion", 7)
-        .insert("FireballScroll", 2 + map_depth)
-        .insert("MagicMissileScroll", 4 + map_depth)
-        .insert("SimpleDagger", 3)
-        .insert("SimpleShield", 3)
+        .insert(&"Goblin", 9 + map_depth)
+        .insert(&"Kobold", 3)
+        .insert(&"HealthPotion", 7)
+        .insert(&"FireballScroll", 2 + map_depth)
+        .insert(&"MagicMissileScroll", 4 + map_depth)
+        .insert(&"SimpleDagger", 3)
+        .insert(&"SimpleShield", 3)
 }
 
 fn spawn_named_entity(ecs: &mut World, ((x, y), name): &(&(i32, i32), &String)) {

@@ -35,11 +35,11 @@ impl<'a> System<'a> for ItemCollectionSystem {
 
         for pickup in attempts.join() {
             if player_inventory_size >= INVENTORY_LIMIT {
-                logs.push(format!(
+                logs.push(&format!(
                     "You are unable to pick up the {}.",
                     names.get(pickup.item).unwrap().name
                 ));
-                logs.push("You are carrying too many items!".to_string());
+                logs.push(&"You are carrying too many items!");
                 attempts.clear();
                 return;
             }
@@ -54,7 +54,7 @@ impl<'a> System<'a> for ItemCollectionSystem {
                 .expect("Unable to insert backpack entry");
 
             if pickup.collected_by == *player_ent {
-                logs.push(format!(
+                logs.push(&format!(
                     "You pick up the {}.",
                     names.get(pickup.item).unwrap().name
                 ));
@@ -95,7 +95,7 @@ impl<'a> System<'a> for ItemDropSystem {
                 .expect("Unable to add position to dropped item");
             backpack.remove(intent_to_drop.item);
             if dropper == *player_ent {
-                logs.push(format!(
+                logs.push(&format!(
                     "You drop the {}",
                     names.get(intent_to_drop.item).unwrap().name
                 ));
@@ -128,7 +128,7 @@ impl<'a> System<'a> for ItemRemoveSystem {
                 .insert(intent.item, InBackpack { owner: entity })
                 .expect("Unable to insert item into backpack");
             if entity == *player_ent {
-                logs.push(format!(
+                logs.push(&format!(
                     "You unequip the {}",
                     names.get(intent.item).unwrap().name
                 ))
@@ -190,16 +190,16 @@ impl<'a> System<'a> for ItemUseSystem {
                 Some(target) => match aoe.get(intent.item) {
                     None => {
                         let idx = map.xy_idx(target.x, target.y);
-                        for mob in map.tile_content[idx].iter() {
+                        for mob in &map.tile_content[idx] {
                             targets.push(*mob);
                         }
                     }
                     Some(area) => {
                         let mut affected_tiles = rltk::field_of_view(target, area.radius, &*map);
                         affected_tiles.retain(|t| (*map).in_bounds(Point::new(t.x, t.y)));
-                        for tile in affected_tiles.iter() {
+                        for tile in &affected_tiles {
                             let idx = map.xy_idx(tile.x, tile.y);
-                            for mob in map.tile_content[idx].iter() {
+                            for mob in &map.tile_content[idx] {
                                 targets.push(*mob);
                             }
                         }
@@ -209,11 +209,11 @@ impl<'a> System<'a> for ItemUseSystem {
 
             //apply heals
             if let Some(heal) = healing_items.get(intent.item) {
-                for target in targets.iter() {
+                for target in &targets {
                     if let Some(stats) = all_stats.get_mut(*target) {
                         stats.hp = i32::min(stats.max_hp, stats.hp + heal.heal_amount);
                         if user == *player_ent {
-                            logs.push(format!(
+                            logs.push(&format!(
                                 "You use the {}, healing {} hp.",
                                 names.get(intent.item).unwrap().name,
                                 heal.heal_amount
@@ -226,12 +226,12 @@ impl<'a> System<'a> for ItemUseSystem {
 
             //deal damage
             if let Some(damage) = damaging_items.get(intent.item) {
-                for mob in targets.iter() {
+                for mob in &targets {
                     SufferDamage::new_damage(&mut suffering, *mob, damage.damage);
                     if user == *player_ent && all_stats.get(*mob).is_some() {
                         let mob_name = &names.get(*mob).unwrap().name;
                         let item_name = &names.get(intent.item).unwrap().name;
-                        logs.push(format!(
+                        logs.push(&format!(
                             "You use {} on {} inflicting {} damage.",
                             item_name, mob_name, damage.damage
                         ));
@@ -249,12 +249,12 @@ impl<'a> System<'a> for ItemUseSystem {
                     {
                         to_unequip.push(item);
                         if targets[0] == *player_ent {
-                            logs.push(format!("You unequip {}.", name.name));
+                            logs.push(&format!("You unequip {}.", name.name));
                         }
                     }
                 }
 
-                for item in to_unequip.iter() {
+                for item in &to_unequip {
                     equipped_items.remove(*item);
                     backpack
                         .insert(*item, InBackpack { owner: targets[0] })
@@ -272,7 +272,7 @@ impl<'a> System<'a> for ItemUseSystem {
                     .expect("Unable to equip desired item");
                 backpack.remove(intent.item);
                 if targets[0] == *player_ent {
-                    logs.push(format!(
+                    logs.push(&format!(
                         "You equip {}.",
                         names.get(intent.item).unwrap().name
                     ));

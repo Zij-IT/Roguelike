@@ -15,8 +15,8 @@ pub struct ParticleBuilder {
 }
 
 impl ParticleBuilder {
-    pub fn new() -> ParticleBuilder {
-        ParticleBuilder {
+    pub const fn new() -> Self {
+        Self {
             requests: Vec::new(),
         }
     }
@@ -53,7 +53,7 @@ impl<'a> System<'a> for ParticleSpawnSystem {
 
     fn run(&mut self, data: Self::SystemData) {
         let (entities, mut builder, mut positions, mut renderables, mut lifetimes) = data;
-        for new_particle in builder.requests.iter() {
+        for new_particle in &builder.requests {
             let p = entities.create();
             positions
                 .insert(
@@ -103,7 +103,7 @@ pub fn cull_dead_particles(ecs: &mut World, frame_time: f32) {
     std::mem::drop(particles);
     std::mem::drop(entities);
 
-    for victim in dead_particles.iter() {
+    for victim in &dead_particles {
         ecs.delete_entity(*victim)
             .expect("Particle not properly deleted");
     }

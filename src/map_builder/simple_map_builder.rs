@@ -6,6 +6,10 @@ use super::{
 use crate::{components::Position, spawning::populate_room};
 use specs::World;
 
+const MAX_ROOMS: i32 = 30;
+const MIN_SIZE: i32 = 6;
+const MAX_SIZE: i32 = 10;
+
 pub struct SimpleMapBuilder {
     map: Map,
     starting_position: Position,
@@ -13,8 +17,8 @@ pub struct SimpleMapBuilder {
 }
 
 impl SimpleMapBuilder {
-    pub fn new(width: i32, height: i32, depth: i32) -> SimpleMapBuilder {
-        SimpleMapBuilder {
+    pub fn new(width: i32, height: i32, depth: i32) -> Self {
+        Self {
             map: Map::new(width, height, depth),
             starting_position: Position { x: 0, y: 0 },
             rooms: Vec::new(),
@@ -25,9 +29,6 @@ impl SimpleMapBuilder {
 impl MapBuilder for SimpleMapBuilder {
     fn build_map(&mut self) {
         assert!(i32::checked_mul(self.map.width, self.map.height) != None);
-        const MAX_ROOMS: i32 = 30;
-        const MIN_SIZE: i32 = 6;
-        const MAX_SIZE: i32 = 10;
 
         let mut rng = rltk::RandomNumberGenerator::new();
         for _ in 0..MAX_ROOMS {

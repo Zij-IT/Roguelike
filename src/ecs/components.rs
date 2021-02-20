@@ -63,11 +63,11 @@ pub struct SufferDamage {
 }
 
 impl SufferDamage {
-    pub fn new_damage(store: &mut WriteStorage<SufferDamage>, victim: Entity, amount: i32) {
+    pub fn new_damage(store: &mut WriteStorage<'_, Self>, victim: Entity, amount: i32) {
         if let Some(suffering) = store.get_mut(victim) {
             suffering.amount.push(amount);
         } else {
-            let dmg = SufferDamage {
+            let dmg = Self {
                 amount: vec![amount],
             };
             store.insert(victim, dmg).expect("Unable to insert damage");

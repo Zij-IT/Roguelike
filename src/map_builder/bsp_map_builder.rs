@@ -18,8 +18,8 @@ pub struct BSPMapBuilder {
 }
 
 impl BSPMapBuilder {
-    pub fn new(width: i32, height: i32, new_depth: i32) -> BSPMapBuilder {
-        BSPMapBuilder {
+    pub fn new(width: i32, height: i32, new_depth: i32) -> Self {
+        Self {
             map: Map::new(width, height, new_depth),
             starting_position: Position { x: 0, y: 0 },
             rects: Vec::new(),
@@ -44,7 +44,7 @@ impl MapBuilder for BSPMapBuilder {
         self.add_sub_rects(first_room);
         for _ in 0..MAX_ATTEMPTS {
             let rect = self.get_random_rect(&mut rng);
-            let candidate = self.get_random_sub_rect(rect, &mut rng);
+            let candidate = Self::get_random_sub_rect(rect, &mut rng);
 
             if self.is_possible(candidate) {
                 apply_room_to_map(&mut self.map, &candidate);
@@ -123,24 +123,6 @@ impl BSPMapBuilder {
         self.rects[idx]
     }
 
-    fn get_random_sub_rect(&self, rect: Rect, rng: &mut RandomNumberGenerator) -> Rect {
-        let rect_width = i32::abs(rect.x1 - rect.x2);
-        let rect_height = i32::abs(rect.y1 - rect.y2);
-
-        let w = i32::max(3, rng.roll_dice(1, i32::min(rect_width, 10)) - 1) + 1;
-        let h = i32::max(3, rng.roll_dice(1, i32::min(rect_height, 10)) - 1) + 1;
-
-        let rand_width = rect.x1 + rng.roll_dice(1, 6);
-        let rand_height = rect.y1 + rng.roll_dice(1, 6);
-
-        Rect {
-            x1: rand_width,
-            x2: rand_width + w,
-            y1: rand_height,
-            y2: rand_height + h,
-        }
-    }
-
     fn is_possible(&self, rect: Rect) -> bool {
         let expanded = Rect {
             x1: rect.x1 - 2,
@@ -163,5 +145,23 @@ impl BSPMapBuilder {
         }
 
         true
+    }
+
+    fn get_random_sub_rect(rect: Rect, rng: &mut RandomNumberGenerator) -> Rect {
+        let rect_width = i32::abs(rect.x1 - rect.x2);
+        let rect_height = i32::abs(rect.y1 - rect.y2);
+
+        let w = i32::max(3, rng.roll_dice(1, i32::min(rect_width, 10)) - 1) + 1;
+        let h = i32::max(3, rng.roll_dice(1, i32::min(rect_height, 10)) - 1) + 1;
+
+        let rand_width = rect.x1 + rng.roll_dice(1, 6);
+        let rand_height = rect.y1 + rng.roll_dice(1, 6);
+
+        Rect {
+            x1: rand_width,
+            x2: rand_width + w,
+            y1: rand_height,
+            y2: rand_height + h,
+        }
     }
 }

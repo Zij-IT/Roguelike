@@ -17,8 +17,8 @@ pub struct CellularAutomataBuilder {
 }
 
 impl CellularAutomataBuilder {
-    pub fn new(width: i32, height: i32, new_depth: i32) -> CellularAutomataBuilder {
-        CellularAutomataBuilder {
+    pub fn new(width: i32, height: i32, new_depth: i32) -> Self {
+        Self {
             map: Map::new(width, height, new_depth),
             starting_position: Position { x: 0, y: 0 },
             noise_areas: HashMap::new(),
@@ -93,7 +93,7 @@ impl MapBuilder for CellularAutomataBuilder {
     }
 
     fn spawn_entities(&mut self, ecs: &mut World) {
-        for area in self.noise_areas.iter() {
+        for area in &self.noise_areas {
             spawn_region(ecs, area.1, self.map.depth);
         }
     }

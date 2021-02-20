@@ -8,7 +8,7 @@ use specs::{Join, World, WorldExt};
 
 const EDGE_BUFFER: usize = 2;
 
-pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
+pub fn render(ecs: &World, ctx: &mut Rltk) {
     let map = ecs.fetch::<Map>();
     let map_width = map.width - 1;
     let map_height = map.height - 1;
@@ -37,7 +37,7 @@ pub fn render_camera(ecs: &World, ctx: &mut Rltk) {
 
     ctx.set_active_console(consoles::CHAR_CONSOLE);
 
-    for (pos, render) in data.iter() {
+    for (pos, render) in &data {
         let idx = map.xy_idx(pos.x, pos.y);
         if map.is_tile_status_set(idx, TileStatus::Visible) {
             let offset_x = pos.x - min_x;

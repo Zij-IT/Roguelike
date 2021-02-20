@@ -76,7 +76,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
                             format!("{} hits {} for {} damage.", &name.name, target_name, damage);
                         SufferDamage::new_damage(&mut damages, attack.target, damage);
                     }
-                    gamelog.push(message);
+                    gamelog.push(&message);
 
                     //Create damage effect
                     if let Some(pos) = positions.get(attack.target) {

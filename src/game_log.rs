@@ -3,13 +3,13 @@ pub struct GameLog {
 }
 
 impl GameLog {
-    pub fn new() -> Self {
-        GameLog {
+    pub const fn new() -> Self {
+        Self {
             entries: Vec::new(),
         }
     }
 
-    pub fn push<S>(&mut self, log: S)
+    pub fn push<S>(&mut self, log: &S)
     where
         S: ToString,
     {

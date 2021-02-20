@@ -5,7 +5,7 @@ pub use systems::cull_dead_characters;
 pub use systems::cull_dead_particles;
 pub use systems::ParticleBuilder;
 
-pub mod input_systems {
+pub mod pre_run_systems {
     use crate::ecs::systems;
     use specs::{RunNow, WorldExt};
 

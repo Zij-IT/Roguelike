@@ -99,7 +99,7 @@ pub fn load_game(ecs: &mut World) {
         for e in ecs.entities().join() {
             to_delete.push(e);
         }
-        for del in to_delete.iter() {
+        for del in &to_delete {
             ecs.delete_entity(*del).expect("Deletion failed");
         }
     }

@@ -30,8 +30,8 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn new(width: i32, height: i32, depth: i32) -> Map {
-        Map {
+    pub fn new(width: i32, height: i32, depth: i32) -> Self {
+        Self {
             tiles: vec![TileType::Wall; (width * height) as usize],
             tile_status: vec![0; (width * height) as usize],
             tile_content: vec![Vec::new(); (width * height) as usize],
@@ -41,7 +41,7 @@ impl Map {
         }
     }
 
-    pub fn xy_idx(&self, x: i32, y: i32) -> usize {
+    pub const fn xy_idx(&self, x: i32, y: i32) -> usize {
         (y * self.width + x) as usize
     }
 
@@ -56,7 +56,7 @@ impl Map {
     }
 
     pub fn clear_content_index(&mut self) {
-        for content in self.tile_content.iter_mut() {
+        for content in &mut self.tile_content {
             content.clear();
         }
     }

@@ -1,7 +1,8 @@
 use super::{
     common::{connect_rooms_via_corridors, EDGE_BUFFER},
     map::{Map, TileType},
-    MapBuilder, rect::Rect,
+    rect::Rect,
+    MapBuilder,
 };
 use crate::{components::Position, spawning::populate_room};
 use rltk::RandomNumberGenerator;
@@ -17,8 +18,8 @@ pub struct BSPInteriorBuilder {
 }
 
 impl BSPInteriorBuilder {
-    pub fn new(width: i32, height: i32, new_depth: i32) -> BSPInteriorBuilder {
-        BSPInteriorBuilder {
+    pub fn new(width: i32, height: i32, new_depth: i32) -> Self {
+        Self {
             map: Map::new(width, height, new_depth),
             starting_position: Position { x: 0, y: 0 },
             rects: Vec::new(),
@@ -74,7 +75,7 @@ impl MapBuilder for BSPInteriorBuilder {
         );
         self.add_sub_rects(first_room, &mut rng);
 
-        for room in self.rects.clone().iter() {
+        for room in &self.rects.clone() {
             self.rooms.push(*room);
             //Slightly different from apply_room_to_map
             for y in room.y1..room.y2 {
