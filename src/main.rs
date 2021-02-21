@@ -1,4 +1,4 @@
-#![deny(clippy::perf, clippy::style, clippy::nursery)]
+#![warn(clippy::perf, clippy::style, clippy::nursery, rust_2018_idioms)]
 //I would also use clippy::pedantic, but I convert between usize and i32 so much that 80+ errors
 //were enough to make me not. I cleaned the large majority of the non-conversion errors though
 
@@ -381,7 +381,7 @@ fn main() -> BError {
     );
 
     //Load all that data driven design goodness
-    raws::load_raws();
+    raws::load();
 
     //gs.ecs must be first, otherwise follow the dependencies
     //DEPENDENCIES:

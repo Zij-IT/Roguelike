@@ -42,22 +42,22 @@ impl RawMaster {
 
     pub fn spawn_named_entity(
         &self,
-        new_entity: EntityBuilder,
+        new_entity: EntityBuilder<'_>,
         key: &str,
         pos: SpawnType,
     ) -> Option<Entity> {
-        return if self.item_index.contains_key(key) {
+        if self.item_index.contains_key(key) {
             Some(self.spawn_named_item(new_entity, self.item_index[key], pos))
         } else if self.mob_index.contains_key(key) {
             Some(self.spawn_named_mob(new_entity, self.mob_index[key], pos))
         } else {
             None
-        };
+        }
     }
 
     pub fn spawn_named_item(
         &self,
-        mut new_entity: EntityBuilder,
+        mut new_entity: EntityBuilder<'_>,
         index: usize,
         pos: SpawnType,
     ) -> Entity {
@@ -69,13 +69,13 @@ impl RawMaster {
             name: item_template.name.clone(),
         });
         new_entity = Self::assign_render(new_entity, &item_template.render);
-        new_entity = Self::assign_position(new_entity, pos);
+        new_entity = Self::assign_position(new_entity, &pos);
 
         //Assign optional components
         if let Some(consumable) = &item_template.consumable {
             new_entity = new_entity.with(Consumable {});
             //Assign effect components
-            for effect in consumable.effects.iter() {
+            for effect in &consumable.effects {
                 new_entity = match effect.0.as_str() {
                     "provides_healing" => new_entity.with(ProvidesHealing {
                         heal_amount: effect.1.parse().unwrap(),
@@ -119,7 +119,7 @@ impl RawMaster {
 
     pub fn spawn_named_mob(
         &self,
-        mut new_entity: EntityBuilder,
+        mut new_entity: EntityBuilder<'_>,
         index: usize,
         pos: SpawnType,
     ) -> Entity {
@@ -143,7 +143,7 @@ impl RawMaster {
                 is_dirty: true,
             });
         new_entity = Self::assign_render(new_entity, &mob_template.render);
-        new_entity = Self::assign_position(new_entity, pos);
+        new_entity = Self::assign_position(new_entity, &pos);
         if mob_template.blocks_tile {
             new_entity = new_entity.with(BlocksTile {})
         }
@@ -151,15 +151,14 @@ impl RawMaster {
         new_entity.build()
     }
 
-    fn assign_position(new_entity: EntityBuilder, pos: SpawnType) -> EntityBuilder {
-        let new_builder = match pos {
-            SpawnType::AtPosition(x, y) => new_entity.with(Position { x, y }),
-        };
-        new_builder
+    fn assign_position<'a>(new_entity: EntityBuilder<'a>, pos: &SpawnType) -> EntityBuilder<'a> {
+        match pos {
+            SpawnType::AtPosition(x, y) => new_entity.with(Position { x: *x, y: *y }),
+        }
     }
 
     fn assign_render<'a>(new_entity: EntityBuilder<'a>, render: &RawRender) -> EntityBuilder<'a> {
-        let colors = ColorPair::new(render.color.clone(), colors::BACKGROUND);
+        let colors = ColorPair::new(render.color, colors::BACKGROUND);
         new_entity.with(Render {
             glyph: render.glyph,
             render_order: render.order,

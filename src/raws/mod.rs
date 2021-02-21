@@ -27,7 +27,7 @@ pub struct Raws {
     pub items: Vec<item_structs::Item>,
 }
 
-pub fn load_raws() {
+pub fn load() {
     rltk::link_resource!(RAW_SPAWNS, raw_spawns_path!());
     let spawn_raw = rltk::embedding::EMBED
         .lock()

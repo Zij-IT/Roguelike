@@ -2,7 +2,7 @@ use super::random_table::RandomTable;
 use crate::{
     constants::colors,
     ecs::components::{
-        BlocksTile, CombatStats, Monster, Name, Player, Position, Render, SerializeMe, Viewshed,
+        CombatStats, Name, Player, Position, Render, SerializeMe, Viewshed,
     },
     map_builder::{
         map::{Map, TileType},
