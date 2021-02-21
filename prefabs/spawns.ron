@@ -1,0 +1,116 @@
+#![enable(implicit_some)]
+(
+    mobs: [
+        (
+            name: "Kobold",
+            blocks_tile: true,
+            vision_range: 6,
+            render: (
+                glyph: 107,
+                color: (200, 0, 0),
+                order: 2,
+            ),
+            stats: (
+                max_hp: 12,
+                defense: 0,
+                power: 2,
+            ),
+        ),
+        (
+            name: "Goblin",
+            blocks_tile: true,
+            vision_range: 8,
+            render: (
+                glyph: 103,
+                color: (200, 0, 0),
+                order: 2,
+            ),
+            stats: (
+                max_hp: 16,
+                defense: 1,
+                power: 3,
+            ),
+        ),
+        (
+            name: "Orc",
+            blocks_tile: true,
+            vision_range: 8,
+            render: (
+                glyph: 111,
+                color: (200, 0, 0),
+                order: 2,
+            ),
+            stats: (
+                max_hp: 20,
+                defense: 0,
+                power: 5,
+            ),
+        ),
+    ],
+    items: [
+        (
+            name: "Health Potion",
+            render: (
+                glyph: 173,
+                color: (255, 0, 255),
+                order: 2,
+            ),
+            consumable: (
+                effects: {
+                    "provides_healing": "8",
+                },
+            ),
+        ),
+        (
+            name: "Magic Missile Scroll",
+            render: (
+                glyph: 41,
+                color: (0, 255, 255),
+                order: 2,
+            ),
+            consumable: (
+                effects: {
+                    "range": "6",
+                    "damage": "20",
+                },
+            ),
+        ),
+        (
+            name: "Fireball Scroll",
+            render: (
+                glyph: 41,
+                color: (255, 165, 0),
+                order: 2,
+            ),
+            consumable: (
+                effects: {
+                    "range": "6",
+                    "damage": "20",
+                    "area_of_effect": "3",
+                },
+            ),
+        ),
+        (
+            name: "Simple Shield",
+            render: (
+                glyph: 9,
+                color: (0, 255, 255),
+                order: 2,
+            ),
+            shield: (
+                defense_bonus: 3
+            ),
+        ),
+        (
+            name: "Simple Dagger",
+            render: (
+                glyph: 47,
+                color: (0, 255, 255),
+                order: 2,
+            ),
+            weapon: (
+                damage_bonus: 3,
+            ),
+        ),
+    ]
+)

@@ -137,7 +137,7 @@ pub struct ProvidesHealing {
 }
 
 #[derive(Component, Debug, ConvertSaveload, Clone)]
-pub struct Ranged {
+pub struct Range {
     pub range: i32,
 }
 

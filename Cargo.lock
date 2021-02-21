@@ -1415,6 +1415,7 @@ dependencies = [
 name = "roguelike"
 version = "0.1.0"
 dependencies = [
+ "lazy_static",
  "rltk",
  "ron",
  "serde",

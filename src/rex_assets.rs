@@ -2,7 +2,7 @@ use rltk::rex::XpFile;
 
 //In rust you are not able to use const string slices inside of macros, and because I don't want to
 //type the same thing multiple times and have an error result out of that, I am using a macro as a
-//constant. If that is too dirty for you, I suggest you avert your eyes. Macros are at the bottom of the file
+//constant. If that is too dirty for you, I suggest you avert your eyes.
 
 #[rustfmt::skip]
 macro_rules! title_screen_path {

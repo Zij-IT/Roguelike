@@ -1,4 +1,4 @@
-#![deny(rust_2018_idioms, clippy::perf, clippy::style, clippy::nursery)]
+#![deny(clippy::perf, clippy::style, clippy::nursery)]
 //I would also use clippy::pedantic, but I convert between usize and i32 so much that 80+ errors
 //were enough to make me not. I cleaned the large majority of the non-conversion errors though
 
@@ -15,6 +15,7 @@ mod game_log;
 mod gui;
 mod map_builder;
 mod player;
+mod raws;
 mod rex_assets;
 mod save_load_util;
 mod spawning;
@@ -212,7 +213,7 @@ impl GameState for EcsWorld {
             }
             RunState::ShowInventory => match gui::show_inventory(self, ctx) {
                 gui::ItemMenuResult::Selected(item) => {
-                    if let Some(range) = self.world.read_storage::<Ranged>().get(item) {
+                    if let Some(range) = self.world.read_storage::<Range>().get(item) {
                         next_state = RunState::ShowTargeting(range.range, item);
                     } else {
                         let mut intent = self.world.write_storage::<WantsToUseItem>();
@@ -366,7 +367,7 @@ fn main() -> BError {
         Player,
         Position,
         ProvidesHealing,
-        Ranged,
+        Range,
         Render,
         SerializationHelper,
         SimpleMarker<SerializeMe>,
@@ -378,6 +379,9 @@ fn main() -> BError {
         WantsToRemoveItem,
         WantsToUseItem,
     );
+
+    //Load all that data driven design goodness
+    raws::load_raws();
 
     //gs.ecs must be first, otherwise follow the dependencies
     //DEPENDENCIES:
