@@ -10,7 +10,7 @@ use specs::{
 
 use std::{fs, path::Path};
 
-const SAVE_PATH: &str = "./saves/savegame.json";
+const SAVE_PATH: &str = "./saves/savegame.ron";
 
 macro_rules! serialize_individually {
     ($ecs:expr, $ser:expr, $data:expr, $( $type:ty),* $(,)?) => {
@@ -54,7 +54,16 @@ pub fn save_game(ecs: &mut World) {
             ecs.read_storage::<SimpleMarker<SerializeMe>>(),
         );
         let writer = std::fs::File::create(SAVE_PATH).unwrap();
-        let mut serializer = serde_json::Serializer::new(writer);
+
+        //There is no particular reason to make the save file pretty, but I am messing around with it
+        //anyhow. It makes it a LOT more human readable, but 9x the size. Should the size begin
+        //to approach a megabyte, I will likely end this. Arbitrary limits FTW!
+        let ser_config = {
+            let mut temp = ron::ser::PrettyConfig::default();
+            temp.separate_tuple_members = true;
+            temp
+        };
+        let mut serializer = ron::Serializer::new(writer, Some(ser_config), true).unwrap();
         serialize_individually!(
             ecs,
             serializer,
@@ -105,7 +114,7 @@ pub fn load_game(ecs: &mut World) {
     }
 
     let data = fs::read_to_string(SAVE_PATH).unwrap();
-    let mut de = serde_json::Deserializer::from_str(&data);
+    let mut de = ron::Deserializer::from_str(&data).unwrap();
 
     {
         let mut d = (
