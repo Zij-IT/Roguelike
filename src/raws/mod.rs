@@ -1,6 +1,7 @@
 mod item_structs;
 mod mob_structs;
 mod raw_master;
+mod spawn_table_structs;
 
 use serde::Deserialize;
 use std::sync::Mutex;
@@ -25,6 +26,7 @@ rltk::embedded_resource!(RAW_SPAWNS, raw_spawns_path!());
 pub struct Raws {
     pub mobs: Vec<mob_structs::Mob>,
     pub items: Vec<item_structs::Item>,
+    pub spawn_table: Vec<spawn_table_structs::Entry>,
 }
 
 pub fn load() {
