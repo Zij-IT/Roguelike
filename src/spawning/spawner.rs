@@ -1,9 +1,7 @@
 use super::random_table::RandomTable;
 use crate::{
     constants::colors,
-    ecs::components::{
-        CombatStats, Name, Player, Position, Render, SerializeMe, Viewshed,
-    },
+    ecs::components::{CombatStats, Name, Player, Position, Render, SerializeMe, Viewshed},
     map_builder::{
         map::{Map, TileType},
         rect::Rect,
@@ -93,15 +91,7 @@ pub fn spawn_player(ecs: &mut World, x: i32, y: i32) -> Entity {
 }
 
 fn create_room_table(map_depth: i32) -> RandomTable {
-    RandomTable::new()
-        .insert(&"Orc", 5 + map_depth)
-        .insert(&"Goblin", 9 + map_depth)
-        .insert(&"Kobold", 3)
-        .insert(&"Health Potion", 7)
-        .insert(&"Fireball Scroll", 2 + map_depth)
-        .insert(&"Magic Missile Scroll", 4 + map_depth)
-        .insert(&"Simple Dagger", 3)
-        .insert(&"Simple Shield", 3)
+    raws::RAWS.lock().unwrap().get_spawn_table(map_depth)
 }
 
 fn spawn_named_entity(ecs: &mut World, ((x, y), name): &(&(i32, i32), &String)) {

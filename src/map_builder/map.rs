@@ -114,20 +114,23 @@ impl BaseMap for Map {
 
         let x = idx as i32 % self.width;
         let y = idx as i32 / self.width;
-        let w = self.width as usize;
 
-        if self.is_exit_valid(x - 1, y) {
-            exits.push((idx - 1, 1.0))
-        };
-        if self.is_exit_valid(x + 1, y) {
-            exits.push((idx + 1, 1.0))
-        };
-        if self.is_exit_valid(x, y - 1) {
-            exits.push((idx - w, 1.0))
-        };
-        if self.is_exit_valid(x, y + 1) {
-            exits.push((idx + w, 1.0))
-        };
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                if self.is_exit_valid(x + dx, y + dy) {
+                    let distance: f32 = match dx * dx + dy * dy {
+                        0 => continue,
+                        1 => 1.0,
+                        2 => 1.45,
+                        _ => {
+                            unreachable!()
+                        },
+                    };
+                    let offset_index = (idx as i32 + dx + self.width * dy) as usize; //Safe because of is_exit_valid
+                    exits.push((offset_index, distance))
+                }
+            }
+        }
 
         exits
     }

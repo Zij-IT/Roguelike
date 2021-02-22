@@ -1,5 +1,15 @@
 #![enable(implicit_some)]
-(
+(   spawn_table: [
+        //Mons
+        (name: "Kobold",                weight: 10, min_depth: 1, max_depth: 3,   scales_to_depth: false,),
+        (name: "Goblin",                weight: 6,  min_depth: 1, max_depth: 6,   scales_to_depth: true, ),
+        (name: "Orc",                   weight: 3,  min_depth: 2, max_depth: 100, scales_to_depth: true, ),
+        (name: "Health Potion",         weight: 6,  min_depth: 1, max_depth: 100, scales_to_depth: true, ),
+        (name: "Magic Missile Scroll",  weight: 4,  min_depth: 1, max_depth: 100, scales_to_depth: true, ),
+        (name: "Fireball Scroll",       weight: 3,  min_depth: 1, max_depth: 100, scales_to_depth: true, ),
+        (name: "Simple Dagger",         weight: 4,  min_depth: 1, max_depth: 100, scales_to_depth: false,),
+        (name: "Simple Shield",         weight: 3,  min_depth: 1, max_depth: 100, scales_to_depth: false,),
+    ],
     mobs: [
         (
             name: "Kobold",

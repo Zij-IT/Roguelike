@@ -13,12 +13,11 @@ impl RandomTable {
         }
     }
 
-    pub fn insert<S: ToString + std::fmt::Display>(mut self, name: &S, weight: i32) -> Self {
+    pub fn insert<S: ToString + std::fmt::Display>(&mut self, name: &S, weight: i32) {
         if weight > 0 {
             self.total_weight += weight;
             self.entries.push(RandomEntry::new(name, weight));
         }
-        self
     }
 
     pub fn roll(&self, rng: &mut RandomNumberGenerator) -> Option<String> {

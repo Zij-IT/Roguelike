@@ -1,7 +1,8 @@
 use super::item_structs::RawRender;
 use super::Raws;
-use crate::{components::*, constants::colors};
+use crate::{components::*, constants::colors, spawning::RandomTable};
 use rltk::ColorPair;
+use specs::saveload::{MarkedBuilder, SimpleMarker};
 use specs::{Builder, Entity, EntityBuilder};
 use std::collections::HashMap;
 
@@ -21,6 +22,7 @@ impl RawMaster {
             raws: Raws {
                 mobs: Vec::new(),
                 items: Vec::new(),
+                spawn_table: Vec::new(),
             },
             mob_index: HashMap::new(),
             item_index: HashMap::new(),
@@ -40,6 +42,25 @@ impl RawMaster {
         }
     }
 
+    pub fn get_spawn_table(&self, depth: i32) -> RandomTable {
+        let possibilities = self
+            .raws
+            .spawn_table
+            .iter()
+            .filter(|entry| entry.min_depth <= depth && entry.max_depth > depth)
+            .collect::<Vec<_>>();
+        let mut table = RandomTable::new();
+        for entry in possibilities {
+            let weight = if entry.scales_to_depth {
+                entry.weight + depth
+            } else {
+                entry.weight
+            };
+            table.insert(&entry.name.clone(), weight);
+        }
+        table
+    }
+
     pub fn spawn_named_entity(
         &self,
         new_entity: EntityBuilder<'_>,
@@ -55,7 +76,7 @@ impl RawMaster {
         }
     }
 
-    pub fn spawn_named_item(
+    fn spawn_named_item(
         &self,
         mut new_entity: EntityBuilder<'_>,
         index: usize,
@@ -64,10 +85,12 @@ impl RawMaster {
         let item_template = &self.raws.items[index];
 
         //Assign required components
-        new_entity = new_entity.with(Item {});
-        new_entity = new_entity.with(Name {
-            name: item_template.name.clone(),
-        });
+        new_entity = new_entity
+            .with(Item {})
+            .with(Name {
+                name: item_template.name.clone(),
+            })
+            .marked::<SimpleMarker<SerializeMe>>();
         new_entity = Self::assign_render(new_entity, &item_template.render);
         new_entity = Self::assign_position(new_entity, &pos);
 
@@ -117,7 +140,7 @@ impl RawMaster {
         new_entity.build()
     }
 
-    pub fn spawn_named_mob(
+    fn spawn_named_mob(
         &self,
         mut new_entity: EntityBuilder<'_>,
         index: usize,
@@ -141,7 +164,8 @@ impl RawMaster {
                 visible_tiles: vec![],
                 range: mob_template.vision_range,
                 is_dirty: true,
-            });
+            })
+            .marked::<SimpleMarker<SerializeMe>>();
         new_entity = Self::assign_render(new_entity, &mob_template.render);
         new_entity = Self::assign_position(new_entity, &pos);
         if mob_template.blocks_tile {

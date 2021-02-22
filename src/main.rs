@@ -1,5 +1,5 @@
 #![warn(clippy::perf, clippy::style, clippy::nursery, rust_2018_idioms)]
-//I would also use clippy::pedantic, but I convert between usize and i32 so much that 80+ errors
+//I would also use clippy::pedantic, but I convert between usize and i32 so much that 90+ warnings
 //were enough to make me not. I cleaned the large majority of the non-conversion errors though
 
 //External includes
