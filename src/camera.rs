@@ -10,15 +10,13 @@ const EDGE_BUFFER: usize = 2;
 
 pub fn render(ecs: &World, ctx: &mut Rltk) {
     let map = ecs.fetch::<Map>();
-    let map_width = map.width - 1;
-    let map_height = map.height - 1;
     let (min_x, max_x, min_y, max_y) = get_screen_bounds(ecs);
 
     ctx.set_active_console(consoles::MAP_CONSOLE);
 
     for (ty, y) in (min_y..max_y).zip(0..).skip(EDGE_BUFFER) {
         for (tx, x) in (min_x..max_x).zip(0..).skip(EDGE_BUFFER) {
-            if tx > 0 && tx < map_width && ty > 0 && ty < map_height {
+            if tx > 0 && tx < map.width && ty > 0 && ty < map.height {
                 let idx = map.xy_idx(tx, ty);
                 if map.is_tile_status_set(idx, TileStatus::Revealed) {
                     let (glyph, color_pair) = get_tile_glyph(idx, &*map);

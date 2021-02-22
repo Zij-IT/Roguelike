@@ -2,6 +2,7 @@
 (   spawn_table: [
         //Mons
         (name: "Kobold",                weight: 10, min_depth: 1, max_depth: 3,   scales_to_depth: false,),
+        (name: "Giant Spider",          weight: 4,  min_depth: 1, max_depth: 4,   scales_to_depth: false,),
         (name: "Goblin",                weight: 6,  min_depth: 1, max_depth: 6,   scales_to_depth: true, ),
         (name: "Orc",                   weight: 3,  min_depth: 2, max_depth: 100, scales_to_depth: true, ),
         (name: "Health Potion",         weight: 6,  min_depth: 1, max_depth: 100, scales_to_depth: true, ),
@@ -9,6 +10,8 @@
         (name: "Fireball Scroll",       weight: 3,  min_depth: 1, max_depth: 100, scales_to_depth: true, ),
         (name: "Simple Dagger",         weight: 4,  min_depth: 1, max_depth: 100, scales_to_depth: false,),
         (name: "Simple Shield",         weight: 3,  min_depth: 1, max_depth: 100, scales_to_depth: false,),
+        (name: "Battle Axe",            weight: 2, min_depth: 2, max_depth: 100, scales_to_depth: false,),
+
     ],
     mobs: [
         (
@@ -54,6 +57,21 @@
                 max_hp: 20,
                 defense: 0,
                 power: 5,
+            ),
+        ),
+        (
+            name: "Giant Spider",
+            blocks_tile: true,
+            vision_range: 8,
+            render: (
+                glyph: 15,
+                color: (200, 0, 0),
+                order: 2,
+            ),
+            stats: (
+                max_hp: 15,
+                defense: 2,
+                power: 1,
             ),
         ),
     ],
@@ -108,7 +126,7 @@
                 order: 2,
             ),
             shield: (
-                defense_bonus: 3
+                defense_bonus: 2
             ),
         ),
         (
@@ -119,7 +137,18 @@
                 order: 2,
             ),
             weapon: (
-                damage_bonus: 3,
+                damage_bonus: 2,
+            ),
+        ),
+        (
+            name: "Battle Axe",
+            render: (
+                glyph: 20,
+                color: (0, 255, 255),
+                order: 2,
+            ),
+            weapon: (
+                damage_bonus: 5,
             ),
         ),
     ]
