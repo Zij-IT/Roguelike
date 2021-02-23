@@ -2,45 +2,52 @@ use super::{
     components::{
         CombatStats, Item, Monster, Player, Position, Viewshed, WantsToMelee, WantsToPickupItem,
     },
-    EcsWorld, GameLog, RunState,
+    EcsWorld, GameLog, RunState, raws::config::CONFIGS
 };
 use crate::map_builder::map::{Map, TileStatus, TileType};
-use rltk::{Point, Rltk, VirtualKeyCode as VKC};
+use rltk::{Point, Rltk};
 use specs::{Entity, Join, World, WorldExt};
 
 pub fn respond_to_input(gs: &mut EcsWorld, ctx: &mut Rltk) -> RunState {
-    match ctx.key {
-        None => {
+    let keys = &CONFIGS.lock().unwrap().keys;
+    if let Some(key) = ctx.key {
+        if key == keys.move_up {
+            try_move(0, -1, &mut gs.world);
+        } else if key == keys.move_down {
+            try_move(0, 1, &mut gs.world);
+        } else if key == keys.move_left {
+            try_move(-1, 0, &mut gs.world);
+        } else if key == keys.move_right {
+            try_move(1, 0, &mut gs.world);
+        } else if key == keys.move_up_left {
+            try_move(-1, -1, &mut gs.world);
+        } else if key == keys.move_up_right {
+            try_move(1, -1, &mut gs.world);
+        } else if key == keys.move_down_left {
+            try_move(-1, 1, &mut gs.world);
+        } else if key == keys.move_down_right {
+            try_move(1, 1, &mut gs.world);
+        } else if key == keys.descend {
+            return try_descend(&mut gs.world);
+        } else if key == keys.grab_item {
+            try_pickup(&mut gs.world);
+        } else if key == keys.drop_item {
+            return RunState::ShowDropItem;
+        } else if key == keys.remove_item {
+            return RunState::ShowRemoveItem
+        } else if key == keys.open_inventory {
+            return RunState::ShowInventory
+        } else if key == keys.go_back {
+            return RunState::SaveGame;
+        } else if key == keys.wait_turn {
+            return skip_turn(&mut gs.world);
+        } else {
             return RunState::AwaitingInput;
         }
-        Some(key) => match key {
-            //Movement keys
-            VKC::H | VKC::Left => try_move(-1, 0, &mut gs.world),
-            VKC::L | VKC::Right => try_move(1, 0, &mut gs.world),
-            VKC::K | VKC::Up => try_move(0, -1, &mut gs.world),
-            VKC::J | VKC::Down => try_move(0, 1, &mut gs.world),
-            VKC::Z => try_move(-1, -1, &mut gs.world),
-            VKC::U => try_move(1, -1, &mut gs.world),
-            VKC::B => try_move(-1, 1, &mut gs.world),
-            VKC::N => try_move(1, 1, &mut gs.world),
-
-            //Item keys
-            VKC::G => try_pickup(&mut gs.world),
-            VKC::I => return RunState::ShowInventory,
-            VKC::D => return RunState::ShowDropItem,
-            VKC::R => return RunState::ShowRemoveItem,
-            //Save key
-            VKC::Escape => return RunState::SaveGame,
-            //Skip key
-            VKC::Space => return skip_turn(&mut gs.world),
-            //Descend Key
-            VKC::Period => return try_descend(&mut gs.world),
-            //Ignore others
-            _ => {
-                return RunState::AwaitingInput;
-            }
-        },
+    } else {
+        return RunState::AwaitingInput;
     }
+
     RunState::PlayerTurn
 }
 

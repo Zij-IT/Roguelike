@@ -1,7 +1,7 @@
 use super::item_structs::RawRender;
-use super::Raws;
 use crate::{components::*, constants::colors, spawning::RandomTable};
 use rltk::ColorPair;
+use serde::Deserialize;
 use specs::saveload::{MarkedBuilder, SimpleMarker};
 use specs::{Builder, Entity, EntityBuilder};
 use std::collections::HashMap;
@@ -10,41 +10,53 @@ pub enum SpawnType {
     AtPosition(i32, i32),
 }
 
-pub struct RawMaster {
-    raws: Raws,
+#[derive(Deserialize, Debug)]
+pub struct RawData {
+    pub mobs: Vec<super::mob_structs::Mob>,
+    pub items: Vec<super::item_structs::Item>,
+    pub spawn_table: Vec<super::spawn_table_structs::Entry>,
+}
+
+impl RawData {
+    pub const fn new() -> Self {
+        Self {
+            mobs: Vec::new(),
+            items: Vec::new(),
+            spawn_table: Vec::new(),
+        }
+    }
+}
+
+pub struct SpawnMaster {
+    raw_data: RawData,
     mob_index: HashMap<String, usize>,
     item_index: HashMap<String, usize>,
 }
 
-impl RawMaster {
+impl SpawnMaster {
     pub fn empty() -> Self {
         Self {
-            raws: Raws {
-                mobs: Vec::new(),
-                items: Vec::new(),
-                spawn_table: Vec::new(),
-            },
+            raw_data: RawData::new(),
             mob_index: HashMap::new(),
             item_index: HashMap::new(),
         }
     }
 
-    pub fn load(&mut self, raws: Raws) {
-        self.raws = raws;
-        self.item_index = HashMap::new();
+    pub fn load(&mut self, raws: RawData) {
+        self.raw_data = raws;
 
-        for (i, item) in self.raws.mobs.iter().enumerate() {
+        for (i, item) in self.raw_data.mobs.iter().enumerate() {
             self.mob_index.insert(item.name.clone(), i);
         }
 
-        for (i, item) in self.raws.items.iter().enumerate() {
+        for (i, item) in self.raw_data.items.iter().enumerate() {
             self.item_index.insert(item.name.clone(), i);
         }
     }
 
-    pub fn get_spawn_table(&self, depth: i32) -> RandomTable {
+    pub fn spawn_table(&self, depth: i32) -> RandomTable {
         let possibilities = self
-            .raws
+            .raw_data
             .spawn_table
             .iter()
             .filter(|entry| entry.min_depth <= depth && entry.max_depth > depth)
@@ -82,7 +94,7 @@ impl RawMaster {
         index: usize,
         pos: SpawnType,
     ) -> Entity {
-        let item_template = &self.raws.items[index];
+        let item_template = &self.raw_data.items[index];
 
         //Assign required components
         new_entity = new_entity
@@ -146,7 +158,7 @@ impl RawMaster {
         index: usize,
         pos: SpawnType,
     ) -> Entity {
-        let mob_template = &self.raws.mobs[index];
+        let mob_template = &self.raw_data.mobs[index];
 
         //Assign required components
         new_entity = new_entity

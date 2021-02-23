@@ -6,7 +6,7 @@ use crate::{
         map::{Map, TileType},
         rect::Rect,
     },
-    raws,
+    raws::spawning::{SpawnType, SPAWN_RAWS},
 };
 use rltk::{ColorPair, RandomNumberGenerator, RGB};
 use specs::{
@@ -91,18 +91,14 @@ pub fn spawn_player(ecs: &mut World, x: i32, y: i32) -> Entity {
 }
 
 fn create_room_table(map_depth: i32) -> RandomTable {
-    raws::RAWS.lock().unwrap().get_spawn_table(map_depth)
+    SPAWN_RAWS.lock().unwrap().spawn_table(map_depth)
 }
 
 fn spawn_named_entity(ecs: &mut World, ((x, y), name): &(&(i32, i32), &String)) {
-    if raws::RAWS
+    if SPAWN_RAWS
         .lock()
         .unwrap()
-        .spawn_named_entity(
-            ecs.create_entity(),
-            name,
-            raws::SpawnType::AtPosition(*x, *y),
-        )
+        .spawn_named_entity(ecs.create_entity(), name, SpawnType::AtPosition(*x, *y))
         .is_some()
     {
         return;

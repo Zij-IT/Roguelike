@@ -264,7 +264,6 @@ pub enum SettingsSelection {
     Audio,
     Visual,
     Keybindings,
-    Accessibility,
     Back,
 }
 

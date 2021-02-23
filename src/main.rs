@@ -329,11 +329,20 @@ impl GameState for EcsWorld {
 rltk::embedded_resource!(GAME_FONT, "../resources/cp437_8x8.png");
 
 fn main() -> BError {
+    //Load Configurations for the game
+    if raws::config::load().is_err() {
+        //Let player know that the config file wasn't able to be read, and that the defaults
+        //will be used
+    }
+
+    let full_screen = raws::config::CONFIGS.lock().unwrap().visuals.full_screen;
+
+    //Create RltkBuilder
     rltk::link_resource!(GAME_FONT, "/resources/cp437_8x8.png");
     let context = RltkBuilder::new()
         .with_title("Bashing Bytes")
         .with_font("cp437_8x8.png", 8, 8)
-        .with_fullscreen(true)
+        .with_fullscreen(full_screen)
         .with_dimensions(80, 60)
         .with_simple_console(80, 60, "cp437_8x8.png") // map
         .with_simple_console_no_bg(80, 60, "cp437_8x8.png") // creatures
@@ -341,7 +350,7 @@ fn main() -> BError {
         .with_tile_dimensions(8, 8)
         .build()?;
 
-    //Construct world
+    //Build world
     let mut world = EcsWorld {
         world: World::new(),
     };
@@ -381,20 +390,20 @@ fn main() -> BError {
     );
 
     //Load all that data driven design goodness
-    raws::load();
+    raws::spawning::load();
 
     //gs.ecs must be first, otherwise follow the dependencies
     //DEPENDENCIES:
     //player -> SimpleMarkerAllocator
     insert_all!(
         world.world,
+        RunState::MainMenu(gui::MainMenuSelection::NewGame),
         SimpleMarkerAllocator::<SerializeMe>::new(),
         rltk::RandomNumberGenerator::new(),
+        rex_assets::RexAssets::new(),
+        ecs::ParticleBuilder::new(),
         Map::new(1, 1, 1),
         Point::new(0, 0),
-        RunState::MainMenu(gui::MainMenuSelection::NewGame),
-        ecs::ParticleBuilder::new(),
-        rex_assets::RexAssets::new(),
         GameLog::new(),
     );
 

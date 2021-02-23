@@ -124,7 +124,7 @@ impl BaseMap for Map {
                         2 => 1.45,
                         _ => {
                             unreachable!()
-                        },
+                        }
                     };
                     let offset_index = (idx as i32 + dx + self.width * dy) as usize; //Safe because of is_exit_valid
                     exits.push((offset_index, distance))
