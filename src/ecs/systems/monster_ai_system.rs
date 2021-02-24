@@ -44,7 +44,7 @@ impl<'a> System<'a> for MonsterAI {
             if vs.visible_tiles.contains(&*player_pos) {
                 let distance =
                     rltk::DistanceAlg::Pythagoras.distance2d(Point::new(pos.x, pos.y), *player_pos);
-                if distance <= 1.0 {
+                if distance < 2.0 {
                     attacks
                         .insert(
                             ent,
@@ -61,6 +61,7 @@ impl<'a> System<'a> for MonsterAI {
                     );
 
                     if path.success && path.steps.len() > 1 {
+                        //Do note, that this does NOT check if the player is there
                         pos.x = path.steps[1] as i32 % map.width;
                         pos.y = path.steps[1] as i32 / map.width;
                         vs.is_dirty = true;

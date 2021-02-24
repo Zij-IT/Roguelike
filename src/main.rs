@@ -23,7 +23,7 @@ mod spawning;
 use constants::consoles;
 use ecs::*;
 use game_log::GameLog;
-use gui::{MainMenuResult, MainMenuSelection, SettingsMenuResult, SettingsSelection};
+use gui::{MainMenuSelection, MainMenuResult, SettingsMenuResult, SettingsSelection};
 use map_builder::map::Map;
 use player::respond_to_input;
 
@@ -211,7 +211,7 @@ impl GameState for EcsWorld {
                 self.goto_next_level();
                 next_state = RunState::PreRun;
             }
-            RunState::ShowInventory => match gui::show_inventory(self, ctx) {
+            RunState::ShowInventory => match gui::show_inventory(&mut self.world, ctx) {
                 gui::ItemMenuResult::Selected(item) => {
                     if let Some(range) = self.world.read_storage::<Range>().get(item) {
                         next_state = RunState::ShowTargeting(range.range, item);
@@ -229,7 +229,7 @@ impl GameState for EcsWorld {
                 gui::ItemMenuResult::Cancel => next_state = RunState::AwaitingInput,
                 gui::ItemMenuResult::NoResponse => {}
             },
-            RunState::ShowDropItem => match gui::show_inventory(self, ctx) {
+            RunState::ShowDropItem => match gui::show_inventory(&mut self.world, ctx) {
                 gui::ItemMenuResult::Selected(item) => {
                     let mut intent = self.world.write_storage::<WantsToDropItem>();
                     intent
@@ -240,7 +240,7 @@ impl GameState for EcsWorld {
                 gui::ItemMenuResult::Cancel => next_state = RunState::AwaitingInput,
                 gui::ItemMenuResult::NoResponse => {}
             },
-            RunState::ShowRemoveItem => match gui::show_inventory(self, ctx) {
+            RunState::ShowRemoveItem => match gui::show_inventory(&mut self.world, ctx) {
                 gui::ItemMenuResult::Selected(item) => {
                     let mut intent = self.world.write_storage::<WantsToRemoveItem>();
                     intent
@@ -302,9 +302,6 @@ impl GameState for EcsWorld {
                         todo!()
                     }
                     SettingsSelection::Keybindings => {
-                        todo!()
-                    }
-                    SettingsSelection::Accessibility => {
                         todo!()
                     }
                     SettingsSelection::Back => {
@@ -390,7 +387,7 @@ fn main() -> BError {
     );
 
     //Load all that data driven design goodness
-    raws::spawning::load();
+    raws::spawn::load();
 
     //gs.ecs must be first, otherwise follow the dependencies
     //DEPENDENCIES:

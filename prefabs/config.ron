@@ -15,6 +15,7 @@
         open_inventory: I,
         go_back: Escape,
         wait_turn: Space,
+        select: Return,
     ),
     visuals: (
         full_screen: true,

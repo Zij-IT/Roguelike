@@ -2,7 +2,8 @@ use super::{
     components::{
         CombatStats, Item, Monster, Player, Position, Viewshed, WantsToMelee, WantsToPickupItem,
     },
-    EcsWorld, GameLog, RunState, raws::config::CONFIGS
+    raws::config::CONFIGS,
+    EcsWorld, GameLog, RunState,
 };
 use crate::map_builder::map::{Map, TileStatus, TileType};
 use rltk::{Point, Rltk};
@@ -34,9 +35,9 @@ pub fn respond_to_input(gs: &mut EcsWorld, ctx: &mut Rltk) -> RunState {
         } else if key == keys.drop_item {
             return RunState::ShowDropItem;
         } else if key == keys.remove_item {
-            return RunState::ShowRemoveItem
+            return RunState::ShowRemoveItem;
         } else if key == keys.open_inventory {
-            return RunState::ShowInventory
+            return RunState::ShowInventory;
         } else if key == keys.go_back {
             return RunState::SaveGame;
         } else if key == keys.wait_turn {

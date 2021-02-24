@@ -6,7 +6,7 @@ use crate::{
         map::{Map, TileType},
         rect::Rect,
     },
-    raws::spawning::{SpawnType, SPAWN_RAWS},
+    raws::spawn::{SpawnType, SPAWN_RAWS},
 };
 use rltk::{ColorPair, RandomNumberGenerator, RGB};
 use specs::{

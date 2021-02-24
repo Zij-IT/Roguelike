@@ -374,10 +374,13 @@ pub struct KeyBinds {
     pub go_back: VirtualKeyCode,
     #[serde(with = "VirtualKeyCodeDef")]
     pub wait_turn: VirtualKeyCode,
+    #[serde(with = "VirtualKeyCodeDef")]
+    pub select: VirtualKeyCode,
 }
 impl KeyBinds {
     pub const fn new() -> Self {
         Self {
+            //Movement
             move_up: VirtualKeyCode::K,
             move_down: VirtualKeyCode::J,
             move_left: VirtualKeyCode::H,
@@ -387,12 +390,17 @@ impl KeyBinds {
             move_down_left: VirtualKeyCode::B,
             move_down_right: VirtualKeyCode::N,
             descend: VirtualKeyCode::Period,
+
+            //Item related
             grab_item: VirtualKeyCode::G,
             drop_item: VirtualKeyCode::D,
             remove_item: VirtualKeyCode::R,
             open_inventory: VirtualKeyCode::I,
+
+            //Other
             go_back: VirtualKeyCode::Escape,
             wait_turn: VirtualKeyCode::Space,
+            select: VirtualKeyCode::Return,
         }
     }
 }

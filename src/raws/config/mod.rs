@@ -15,7 +15,7 @@ lazy_static::lazy_static! {
 
 rltk::embedded_resource!(CONFIG_RAW, config_path!());
 
-pub fn load() -> Result<(), ()>{
+pub fn load() -> Result<(), ()> {
     rltk::link_resource!(CONFIG_RAW, config_path!());
     let config_as_bytes = rltk::embedding::EMBED
         .lock()
@@ -24,7 +24,7 @@ pub fn load() -> Result<(), ()>{
 
     if let Ok(configs) = ron::de::from_bytes(config_as_bytes) {
         CONFIGS.lock().unwrap().load_config(configs);
-        return Ok(())
+        return Ok(());
     }
 
     Err(())
