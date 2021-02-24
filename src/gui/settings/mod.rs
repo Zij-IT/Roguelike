@@ -1,5 +1,5 @@
-mod keybindings;
 mod audio;
+mod keybindings;
 mod visual;
 
 use crate::{

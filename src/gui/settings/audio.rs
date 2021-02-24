@@ -4,6 +4,4 @@ pub enum AudioSettings {
     MusicVolume,
 }
 
-pub fn show_aud() {
-
-}
+pub fn show_aud() {}

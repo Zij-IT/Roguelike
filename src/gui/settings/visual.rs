@@ -16,6 +16,4 @@ pub enum VisualSettings {
     ColorMapping(ColorTargets),
 }
 
-pub fn show_vis() {
-
-}
+pub fn show_vis() {}

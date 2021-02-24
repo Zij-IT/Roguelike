@@ -5,7 +5,10 @@ use super::{
     raws::config::CONFIGS,
     EcsWorld, GameLog, RunState,
 };
-use crate::map_builder::map::{Map, TileStatus, TileType};
+use crate::{
+    gui::InventoryMode,
+    map_builder::map::{Map, TileStatus, TileType},
+};
 use rltk::{Point, Rltk};
 use specs::{Entity, Join, World, WorldExt};
 
@@ -33,11 +36,11 @@ pub fn respond_to_input(gs: &mut EcsWorld, ctx: &mut Rltk) -> RunState {
         } else if key == keys.grab_item {
             try_pickup(&mut gs.world);
         } else if key == keys.drop_item {
-            return RunState::ShowDropItem;
+            return RunState::Inventory(InventoryMode::Drop);
         } else if key == keys.remove_item {
-            return RunState::ShowRemoveItem;
+            return RunState::Inventory(InventoryMode::Remove);
         } else if key == keys.open_inventory {
-            return RunState::ShowInventory;
+            return RunState::Inventory(InventoryMode::Use);
         } else if key == keys.go_back {
             return RunState::SaveGame;
         } else if key == keys.wait_turn {

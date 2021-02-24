@@ -7,8 +7,8 @@ use specs::{Entity, World, WorldExt};
 mod game_over;
 mod inventory;
 mod main_menu;
-mod targeting;
 mod settings;
+mod targeting;
 
 pub use game_over::*;
 pub use inventory::*;

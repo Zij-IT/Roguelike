@@ -14,6 +14,13 @@ pub enum ItemMenuResult {
     Selected(Entity),
 }
 
+#[derive(PartialEq, Copy, Clone, Debug)]
+pub enum InventoryMode {
+    Use,
+    Drop,
+    Remove,
+}
+
 pub fn show_inventory(world: &mut World, ctx: &mut Rltk) -> ItemMenuResult {
     let player_ent = world.fetch::<Entity>();
     let current_state = world.fetch::<RunState>();
@@ -24,7 +31,7 @@ pub fn show_inventory(world: &mut World, ctx: &mut Rltk) -> ItemMenuResult {
     //Unable to simplify to avoid the duplication of the lines .join() .. .collect() because the
     //if arms are of different types.
     let relevant_entities = {
-        if *current_state == RunState::ShowRemoveItem {
+        if *current_state == RunState::Inventory(InventoryMode::Remove) {
             let equipped_items = world.read_storage::<Equipped>();
             (&equipped_items, &names, &entities)
                 .join()

@@ -1,7 +1,3 @@
-pub enum KeyBinds {
+pub enum KeyBinds {}
 
-}
-
-pub fn show_keybindings() {
-
-}
+pub fn show_keybindings() {}
