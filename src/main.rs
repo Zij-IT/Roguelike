@@ -175,6 +175,17 @@ impl GameState for EcsWorld {
             ctx.cls();
         }
 
+        if ctx.key == Some(rltk::VirtualKeyCode::Key1) {
+            for i in 0..consoles::NUM_OF_CONSOLES {
+                ctx.set_active_font(0, true);
+            }
+        }
+        else if ctx.key == Some(rltk::VirtualKeyCode::Key2) {
+            for i in 0..consoles::NUM_OF_CONSOLES {
+                ctx.set_active_font(1, true);
+            }
+        }
+
         ecs::cull_dead_particles(&mut self.world, ctx.frame_time_ms);
         let mut next_state = *self.world.fetch::<RunState>();
 
@@ -318,6 +329,7 @@ impl GameState for EcsWorld {
 }
 
 rltk::embedded_resource!(GAME_FONT, "../resources/cp437_8x8.png");
+rltk::embedded_resource!(GAME_FONT_THIN, "../resources/cp437_8x8_thin.png");
 
 fn main() -> BError {
     //Load Configurations for the game
@@ -330,9 +342,11 @@ fn main() -> BError {
 
     //Create RltkBuilder
     rltk::link_resource!(GAME_FONT, "/resources/cp437_8x8.png");
+    rltk::link_resource!(GAME_FONT_THIN, "/resources/cp437_8x8_thin.png");
     let context = RltkBuilder::new()
         .with_title("Bashing Bytes")
         .with_font("cp437_8x8.png", 8, 8)
+        .with_font("cp437_8x8_thin.png", 8, 8)
         .with_fullscreen(full_screen)
         .with_dimensions(80, 60)
         .with_simple_console(80, 60, "cp437_8x8.png") // map
