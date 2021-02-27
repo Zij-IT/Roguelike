@@ -8,7 +8,7 @@ use crate::{
     },
     raws::spawn::{SpawnType, SPAWN_RAWS},
 };
-use rltk::{ColorPair, RandomNumberGenerator, RGB};
+use rltk::{ColorPair, RGB};
 use specs::{
     prelude::*,
     saveload::{MarkedBuilder, SimpleMarker},
@@ -35,7 +35,7 @@ pub fn populate_room(ecs: &mut World, room: &Rect) {
 
 pub fn spawn_region(ecs: &mut World, area: &[(i32, i32)], map_depth: i32) {
     let spawn_table = create_room_table(map_depth);
-    let mut rng = ecs.write_resource::<RandomNumberGenerator>();
+    let mut rng = rltk::RandomNumberGenerator::new();
     let mut spawn_points = HashMap::new();
     let mut areas = Vec::from(area);
 

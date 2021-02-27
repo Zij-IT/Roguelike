@@ -383,18 +383,14 @@ fn main() -> BError {
     //Load all that data driven design goodness
     raws::spawn::load();
 
-    //gs.ecs must be first, otherwise follow the dependencies
     //DEPENDENCIES:
     //player -> SimpleMarkerAllocator
     insert_all!(
         world.world,
         RunState::MainMenu(gui::MainMenuSelection::NewGame),
         SimpleMarkerAllocator::<SerializeMe>::new(),
-        rltk::RandomNumberGenerator::new(),
         rex_assets::RexAssets::new(),
         ecs::ParticleBuilder::new(),
-        Map::new(1, 1, 1),
-        Point::new(0, 0),
         GameLog::new(),
     );
 
