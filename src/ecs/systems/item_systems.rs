@@ -1,6 +1,6 @@
 use crate::{
     components::{
-        AreaOfEffect, CombatStats, Consumable, Equipable, Equipped, InBackpack, InflictsDamage,
+        AreaOfEffect, CombatStats, Consumable, Equipment, Equipped, InBackpack, InflictsDamage,
         Name, Position, ProvidesHealing, SufferDamage, WantsToDropItem, WantsToPickupItem,
         WantsToRemoveItem, WantsToUseItem,
     },
@@ -152,7 +152,7 @@ impl<'a> System<'a> for ItemUseSystem {
         ReadStorage<'a, InflictsDamage>,
         ReadStorage<'a, Name>,
         ReadStorage<'a, ProvidesHealing>,
-        ReadStorage<'a, Equipable>,
+        ReadStorage<'a, Equipment>,
         WriteExpect<'a, GameLog>,
         WriteStorage<'a, Equipped>,
         WriteStorage<'a, InBackpack>,
@@ -161,6 +161,7 @@ impl<'a> System<'a> for ItemUseSystem {
         WriteStorage<'a, WantsToUseItem>,
     );
 
+    #[allow(clippy::too_many_lines)]
     fn run(&mut self, data: Self::SystemData) {
         let (
             entities,
@@ -183,10 +184,10 @@ impl<'a> System<'a> for ItemUseSystem {
         for (user, intent) in (&entities, &intents).join() {
             let mut used_item = true;
 
-            //targeting
+            //Get all targets!
             let mut targets: Vec<Entity> = Vec::new();
             match intent.target {
-                None => targets.push(*player_ent),
+                None => targets.push(user),
                 Some(target) => match aoe.get(intent.item) {
                     None => {
                         let idx = map.xy_idx(target.x, target.y);
@@ -207,7 +208,7 @@ impl<'a> System<'a> for ItemUseSystem {
                 },
             }
 
-            //apply heals
+            //if the item heals...
             if let Some(heal) = healing_items.get(intent.item) {
                 for target in &targets {
                     if let Some(stats) = all_stats.get_mut(*target) {
@@ -224,7 +225,7 @@ impl<'a> System<'a> for ItemUseSystem {
                 }
             }
 
-            //deal damage
+            //if the item deals damage on use...
             if let Some(damage) = damaging_items.get(intent.item) {
                 for mob in &targets {
                     SufferDamage::new_damage(&mut suffering, *mob, damage.damage);
@@ -240,12 +241,13 @@ impl<'a> System<'a> for ItemUseSystem {
                 }
             }
 
-            //Equippables
-            if let Some(equipable) = equipables.get(intent.item) {
+            //If the item can be equipped...
+            if let Some(equipment) = equipables.get(intent.item) {
+                //De-equip all items that share a slot
                 let mut to_unequip = Vec::new();
                 for (item, already_equipped, name) in (&entities, &equipped_items, &names).join() {
                     if already_equipped.owner == targets[0]
-                        && equipable.slot == already_equipped.slot
+                        && equipment.slot == already_equipped.slot
                     {
                         to_unequip.push(item);
                         if targets[0] == *player_ent {
@@ -261,16 +263,19 @@ impl<'a> System<'a> for ItemUseSystem {
                         .expect("Unable to put unequipped item into backpack");
                 }
 
+                //Equip item
                 equipped_items
                     .insert(
                         intent.item,
                         Equipped {
                             owner: targets[0],
-                            slot: equipable.slot,
+                            slot: equipment.slot,
                         },
                     )
                     .expect("Unable to equip desired item");
                 backpack.remove(intent.item);
+
+                //Inform if player is equipping
                 if targets[0] == *player_ent {
                     logs.push(&format!(
                         "You equip {}.",

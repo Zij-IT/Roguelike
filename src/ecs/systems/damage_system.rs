@@ -1,4 +1,5 @@
-use crate::{CombatStats, GameLog, Name, Player, RunState, SufferDamage};
+use crate::state::{Gameplay, State};
+use crate::{CombatStats, GameLog, Name, Player, State::Game, SufferDamage};
 use specs::prelude::*;
 
 pub struct DamageSystem {}
@@ -39,8 +40,9 @@ pub fn cull_dead_characters(ecs: &mut World) {
                         }
                     }
                     Some(_) => {
-                        let mut run_state = ecs.write_resource::<RunState>();
-                        *run_state = RunState::GameOver;
+                        //Update State
+                        let mut state = ecs.fetch_mut::<State>();
+                        *state = Game(Gameplay::GameOver);
                     }
                 }
             }

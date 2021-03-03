@@ -172,6 +172,7 @@ enum VirtualKeyCodeDef {
 }
 
 impl From<VirtualKeyCodeDef> for VirtualKeyCode {
+    #[allow(clippy::too_many_lines)]
     fn from(vlc: VirtualKeyCodeDef) -> Self {
         match vlc {
             VirtualKeyCodeDef::Key1 => Self::Key1,

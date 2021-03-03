@@ -1,11 +1,24 @@
-#![warn(clippy::perf, clippy::style, clippy::nursery, rust_2018_idioms)]
-//I would also use clippy::pedantic, but I convert between usize and i32 so much that 90+ warnings
-//were enough to make me not. I cleaned the large majority of the non-conversion errors though
+#![warn(
+    clippy::perf,
+    clippy::style,
+    clippy::nursery,
+    rust_2018_idioms,
+    clippy::pedantic
+)]
+#![allow(
+    clippy::cast_possible_wrap,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::wildcard_imports,
+    clippy::cast_precision_loss
+)]
 
 //External includes
 use rltk::prelude::*;
-use specs::prelude::*;
-use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
+use specs::{
+    prelude::*,
+    saveload::{SimpleMarker, SimpleMarkerAllocator},
+};
 
 //Internal mods and includes
 mod camera;
@@ -19,14 +32,24 @@ mod raws;
 mod rex_assets;
 mod save_load_util;
 mod spawning;
+mod state;
 
-use crate::gui::{InventoryMode, ItemMenuResult};
 use constants::consoles;
 use ecs::*;
 use game_log::GameLog;
-use gui::{MainMenuResult, MainMenuSelection, SettingsMenuResult, SettingsSelection};
+use gui::{
+    inventory::{InvMode, InvResult},
+    targeting::TargetResult,
+};
 use map_builder::map::Map;
 use player::respond_to_input;
+use state::{
+    AudioOption, Gameplay,
+    Gameplay::{AwaitingInput, PreRun},
+    KeyBindingOption, MainOption, Menu, SettingsOption, State,
+    State::Game,
+    VisualOption,
+};
 
 //Macros
 ///Given a specs::World, and a list of components, it registers all components in the world
@@ -51,27 +74,12 @@ macro_rules! insert_all {
 const MAP_HEIGHT: i32 = 64;
 const MAP_WIDTH: i32 = 64;
 
-#[derive(PartialEq, Copy, Clone, Debug)]
-pub enum RunState {
-    AwaitingInput,
-    GameOver,
-    MainMenu(gui::MainMenuSelection),
-    SettingsMenu(gui::SettingsSelection),
-    MonsterTurn,
-    NextLevel,
-    PlayerTurn,
-    PreRun,
-    SaveGame,
-    Inventory(gui::InventoryMode),
-    ShowTargeting(i32, Entity),
-}
-
 //Main construct
-pub struct EcsWorld {
+pub struct BashingBytes {
     pub world: World,
 }
 
-impl EcsWorld {
+impl BashingBytes {
     ///Gathers all entities that are not related to the player
     fn entities_to_remove_on_level_change(&mut self) -> Vec<Entity> {
         let entities = self.world.entities();
@@ -161,64 +169,87 @@ impl EcsWorld {
             player_pos_comp.y = player_y;
         }
 
-        let mut viewsheds = self.world.write_storage::<Viewshed>();
-        if let Some(vs) = viewsheds.get_mut(*player_ent) {
-            vs.is_dirty = true;
+        let mut fields_of_view = self.world.write_storage::<FieldOfView>();
+        if let Some(fov) = fields_of_view.get_mut(*player_ent) {
+            fov.is_dirty = true;
         }
     }
-}
 
-impl GameState for EcsWorld {
-    fn tick(&mut self, ctx: &mut Rltk) {
-        for i in 0..consoles::NUM_OF_CONSOLES {
-            ctx.set_active_console(i);
-            ctx.cls();
+    fn calc_menu_state(&mut self, ctx: &mut Rltk, current_state: Menu) -> State {
+        match current_state {
+            Menu::Main(option) => {
+                let main_menu_res = {
+                    //Assets are fetched here to please the borrow checker!
+                    let assets = self.world.fetch::<rex_assets::RexAssets>();
+                    gui::main_menu::show(ctx, option, &*assets)
+                };
+
+                match main_menu_res {
+                    (option, false) => State::Menu(Menu::Main(option)),
+                    (option, true) => match option {
+                        MainOption::NewGame => {
+                            self.game_over_cleanup();
+                            State::Game(PreRun)
+                        }
+                        MainOption::LoadGame => {
+                            if save_load_util::does_save_exist() {
+                                save_load_util::load_game(&mut self.world);
+                                save_load_util::delete_save();
+                                State::Game(AwaitingInput)
+                            } else {
+                                State::Menu(Menu::Main(MainOption::LoadGame))
+                            }
+                        }
+                        MainOption::Settings => State::Menu(Menu::Settings(SettingsOption::Audio)),
+                        MainOption::Quit => std::process::exit(0),
+                    },
+                }
+            }
+            Menu::Settings(option) => {
+                let assets = &*self.world.fetch::<rex_assets::RexAssets>();
+                match gui::settings::show_settings_menu(ctx, option, assets) {
+                    (new_option, false) => State::Menu(Menu::Settings(new_option)),
+                    (new_option, true) => match new_option {
+                        SettingsOption::Audio => {
+                            State::Menu(Menu::Audio(AudioOption::MasterVolume))
+                        }
+                        SettingsOption::Visual => {
+                            State::Menu(Menu::Visual(VisualOption::FullScreen))
+                        }
+                        SettingsOption::Keybindings => {
+                            State::Menu(Menu::Keybinding(KeyBindingOption::Up))
+                        }
+                        SettingsOption::Back => State::Menu(Menu::Main(MainOption::Settings)),
+                    },
+                }
+            }
+            Menu::Audio(_option) => todo!(),
+            Menu::Visual(_option) => todo!(),
+            Menu::Keybinding(_option) => todo!(),
         }
+    }
 
-        ecs::cull_dead_particles(&mut self.world, ctx.frame_time_ms);
-        let mut next_state = *self.world.fetch::<RunState>();
-
-        //Draw map & characters
-        if !matches!(next_state, RunState::MainMenu(_))
-            && !matches!(next_state, RunState::SettingsMenu(_))
-        {
-            gui::show_hud(&self.world, ctx);
-            camera::render(&self.world, ctx);
-        }
-
-        //Calculates next state based on current state
-        match next_state {
-            RunState::PreRun => {
+    fn calc_game_state(&mut self, ctx: &mut Rltk, current_state: Gameplay) -> State {
+        match current_state {
+            Gameplay::PreRun => {
                 ecs::pre_run_systems::execute(&mut self.world);
-                next_state = RunState::AwaitingInput;
+                Game(Gameplay::AwaitingInput)
             }
-            RunState::AwaitingInput => {
-                next_state = respond_to_input(self, ctx);
-            }
-            RunState::PlayerTurn => {
+            Gameplay::AwaitingInput => Game(respond_to_input(self, ctx)),
+            Gameplay::PlayerTurn => {
                 ecs::all_systems::execute(&mut self.world);
-                next_state = RunState::MonsterTurn;
+                Game(Gameplay::MonsterTurn)
             }
-            RunState::MonsterTurn => {
+            Gameplay::MonsterTurn => {
                 ecs::all_systems::execute(&mut self.world);
-                next_state = RunState::AwaitingInput;
+                Game(Gameplay::AwaitingInput)
             }
-            RunState::SaveGame => {
-                save_load_util::save_game(&mut self.world);
-                next_state = RunState::MainMenu(gui::MainMenuSelection::LoadGame);
-            }
-            RunState::NextLevel => {
-                self.goto_next_level();
-                next_state = RunState::PreRun;
-            }
-            RunState::Inventory(mode) => match gui::show_inventory(&mut self.world, ctx) {
-                ItemMenuResult::Cancel => next_state = RunState::AwaitingInput,
-                ItemMenuResult::NoResponse => {}
-                ItemMenuResult::Selected(item) => match mode {
-                    InventoryMode::Use => {
-                        if let Some(range) = self.world.read_storage::<Range>().get(item) {
-                            next_state = RunState::ShowTargeting(range.range, item);
-                        } else {
+            Gameplay::Inventory(mode) => match gui::inventory::show(&mut self.world, ctx) {
+                InvResult::Cancel => Game(Gameplay::AwaitingInput),
+                InvResult::NoResponse => Game(current_state),
+                InvResult::Selected(item) => match mode {
+                    InvMode::Use => self.world.read_storage::<Range>().get(item).map_or_else(
+                        || {
                             let mut intent = self.world.write_storage::<WantsToUseItem>();
                             intent
                                 .insert(
@@ -226,94 +257,92 @@ impl GameState for EcsWorld {
                                     WantsToUseItem { item, target: None },
                                 )
                                 .expect("Unable to insert intent");
-                            next_state = RunState::PlayerTurn;
-                        }
-                    }
-                    InventoryMode::Drop => {
+                            Game(Gameplay::PlayerTurn)
+                        },
+                        |range| Game(Gameplay::ShowTargeting(range.range, item)),
+                    ),
+                    InvMode::Drop => {
                         let mut intent = self.world.write_storage::<WantsToDropItem>();
                         intent
                             .insert(*self.world.fetch::<Entity>(), WantsToDropItem { item })
                             .expect("Unable to insert intent to drop item");
-                        next_state = RunState::PlayerTurn;
+                        Game(Gameplay::PlayerTurn)
                     }
-                    InventoryMode::Remove => {
+                    InvMode::Remove => {
                         let mut intent = self.world.write_storage::<WantsToRemoveItem>();
                         intent
                             .insert(*self.world.fetch::<Entity>(), WantsToRemoveItem { item })
                             .expect("Unable to insert intent to remove item");
-                        next_state = RunState::PlayerTurn;
+                        Game(Gameplay::PlayerTurn)
                     }
                 },
             },
-            RunState::ShowTargeting(range, item) => match gui::show_targeting(self, ctx, range) {
-                gui::TargetResult::Selected(target) => {
-                    let mut intent = self.world.write_storage::<WantsToUseItem>();
-                    intent
-                        .insert(
-                            *self.world.fetch::<Entity>(),
-                            WantsToUseItem {
-                                item,
-                                target: Some(target),
-                            },
-                        )
-                        .expect("Unable to insert intent");
-                    next_state = RunState::PlayerTurn;
-                }
-                gui::TargetResult::Cancel => next_state = RunState::AwaitingInput,
-                gui::TargetResult::NoResponse => {}
-            },
-            RunState::MainMenu(_) => match gui::show_main_menu(&mut self.world, ctx) {
-                MainMenuResult::NoSelection(option) => next_state = RunState::MainMenu(option),
-                MainMenuResult::Selection(option) => match option {
-                    MainMenuSelection::NewGame => {
-                        self.game_over_cleanup();
-                        next_state = RunState::PreRun;
-                    }
-                    MainMenuSelection::LoadGame => {
-                        if save_load_util::does_save_exist() {
-                            save_load_util::load_game(&mut self.world);
-                            next_state = RunState::AwaitingInput;
-                            save_load_util::delete_save();
-                        } else {
-                            next_state = RunState::MainMenu(option);
-                        }
-                    }
-                    MainMenuSelection::Settings => {
-                        next_state = RunState::SettingsMenu(SettingsSelection::Audio)
-                    }
-                    MainMenuSelection::Quit => std::process::exit(0),
-                },
-            },
-            RunState::SettingsMenu(_) => match gui::show_settings_menu(&mut self.world, ctx) {
-                SettingsMenuResult::NoSelection(option) => {
-                    next_state = RunState::SettingsMenu(option)
-                }
-                SettingsMenuResult::Selection(option) => match option {
-                    SettingsSelection::Audio => {
-                        todo!()
-                    }
-                    SettingsSelection::Visual => {
-                        todo!()
-                    }
-                    SettingsSelection::Keybindings => {
-                        todo!()
-                    }
-                    SettingsSelection::Back => {
-                        next_state = RunState::MainMenu(MainMenuSelection::Settings)
-                    }
-                },
-            },
-            RunState::GameOver => {
-                if gui::show_game_over(ctx) == gui::GameOverResult::QuitToMenu {
+            Gameplay::NextLevel => {
+                self.goto_next_level();
+                Game(Gameplay::PreRun)
+            }
+            Gameplay::SaveGame => {
+                save_load_util::save_game(&mut self.world);
+                State::Menu(Menu::Main(MainOption::LoadGame))
+            }
+            Gameplay::GameOver => {
+                if gui::game_over::show(ctx) {
+                    Game(current_state)
+                } else {
                     self.game_over_cleanup();
-                    next_state = RunState::MainMenu(gui::MainMenuSelection::NewGame);
+                    State::Menu(Menu::Main(MainOption::NewGame))
+                }
+            }
+            Gameplay::ShowTargeting(range, item) => {
+                match gui::targeting::show(&self.world, ctx, range) {
+                    TargetResult::NoResponse => Game(current_state),
+                    TargetResult::Cancel => Game(Gameplay::AwaitingInput),
+                    TargetResult::Selected(target) => {
+                        let mut intent = self.world.write_storage::<WantsToUseItem>();
+                        intent
+                            .insert(
+                                *self.world.fetch::<Entity>(),
+                                WantsToUseItem {
+                                    item,
+                                    target: Some(target),
+                                },
+                            )
+                            .expect("Unable to insert intent");
+                        Game(Gameplay::PlayerTurn)
+                    }
                 }
             }
         }
+    }
+}
 
-        //Replace RunState with the new one
-        self.world.insert::<RunState>(next_state);
-        ecs::cull_dead_characters(&mut self.world);
+impl GameState for BashingBytes {
+    fn tick(&mut self, ctx: &mut Rltk) {
+        for i in 0..consoles::NUM_OF_CONSOLES {
+            ctx.set_active_console(i);
+            ctx.cls();
+        }
+
+        let current_state = *self.world.fetch::<State>();
+
+        let next_state: State = match current_state {
+            State::Menu(menu) => self.calc_menu_state(ctx, menu),
+            State::Game(game) => {
+                gui::hud::show(&self.world, ctx);
+                camera::render(&self.world, ctx);
+
+                ecs::cull_dead_particles(&mut self.world, ctx.frame_time_ms);
+
+                let state = self.calc_game_state(ctx, game);
+
+                ecs::cull_dead_characters(&mut self.world);
+
+                state
+            }
+        };
+
+        //Replace State with the new one
+        self.world.insert::<State>(next_state);
     }
 }
 
@@ -324,6 +353,7 @@ fn main() -> BError {
     if raws::config::load().is_err() {
         //Let player know that the config file wasn't able to be read, and that the defaults
         //will be used
+        todo!()
     }
 
     let full_screen = raws::config::CONFIGS.lock().unwrap().visuals.full_screen;
@@ -342,20 +372,20 @@ fn main() -> BError {
         .build()?;
 
     //Build world
-    let mut world = EcsWorld {
+    let mut bashing_bytes = BashingBytes {
         world: World::new(),
     };
 
     //Register the components
     //gs.ecs must be first, otherwise irrelevant
     register_all!(
-        world.world,
+        bashing_bytes.world,
         AreaOfEffect,
         BlocksTile,
         CombatStats,
         Consumable,
         DefenseBonus,
-        Equipable,
+        Equipment,
         Equipped,
         InBackpack,
         InflictsDamage,
@@ -372,7 +402,7 @@ fn main() -> BError {
         SerializationHelper,
         SimpleMarker<SerializeMe>,
         SufferDamage,
-        Viewshed,
+        FieldOfView,
         WantsToDropItem,
         WantsToMelee,
         WantsToPickupItem,
@@ -386,8 +416,8 @@ fn main() -> BError {
     //DEPENDENCIES:
     //player -> SimpleMarkerAllocator
     insert_all!(
-        world.world,
-        RunState::MainMenu(gui::MainMenuSelection::NewGame),
+        bashing_bytes.world,
+        State::Menu(Menu::Main(MainOption::NewGame)),
         SimpleMarkerAllocator::<SerializeMe>::new(),
         rex_assets::RexAssets::new(),
         ecs::ParticleBuilder::new(),
@@ -396,12 +426,12 @@ fn main() -> BError {
 
     //Unable to include this statement in the above batch due to the borrow checker
     //Reason: Both world::insert and spawn_player both borrow world.world mutably
-    let player_ent = spawning::spawn_player(&mut world.world, 0, 0);
-    insert_all!(world.world, player_ent);
+    let player_ent = spawning::spawn_player(&mut bashing_bytes.world, 0, 0);
+    insert_all!(bashing_bytes.world, player_ent);
 
     //Generate map
-    world.generate_world_map(1);
+    bashing_bytes.generate_world_map(1);
 
     //Start game
-    main_loop(context, world)
+    main_loop(context, bashing_bytes)
 }

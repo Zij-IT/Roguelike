@@ -1,7 +1,7 @@
 use crate::{
-    components::{Monster, Position, Viewshed, WantsToMelee},
+    components::{FieldOfView, Monster, Position, WantsToMelee},
     map_builder::map::Map,
-    RunState,
+    state::{Gameplay, State, State::Game},
 };
 use rltk::Point;
 use specs::prelude::*;
@@ -13,11 +13,11 @@ impl<'a> System<'a> for MonsterAI {
         Entities<'a>,
         ReadExpect<'a, Point>,
         ReadExpect<'a, Entity>,
-        ReadExpect<'a, RunState>,
+        ReadExpect<'a, State>,
         ReadStorage<'a, Monster>,
         WriteExpect<'a, Map>,
         WriteStorage<'a, Position>,
-        WriteStorage<'a, Viewshed>,
+        WriteStorage<'a, FieldOfView>,
         WriteStorage<'a, WantsToMelee>,
     );
 
@@ -26,14 +26,15 @@ impl<'a> System<'a> for MonsterAI {
             entities,
             player_pos,
             player_ent,
-            runstate,
+            state,
             monsters,
             map,
             mut positions,
             mut viewsheds,
             mut attacks,
         ) = data;
-        if *runstate != RunState::MonsterTurn {
+
+        if *state != Game(Gameplay::MonsterTurn) {
             return;
         }
 

@@ -1,13 +1,7 @@
 use crate::constants::{colors, consoles};
 use rltk::{Rltk, RGB};
 
-#[derive(PartialEq, Copy, Clone)]
-pub enum GameOverResult {
-    NoResponse,
-    QuitToMenu,
-}
-
-pub fn show_game_over(ctx: &mut Rltk) -> GameOverResult {
+pub fn show(ctx: &mut Rltk) -> bool {
     for i in 0..consoles::NUM_OF_CONSOLES {
         ctx.set_active_console(i);
         ctx.cls();
@@ -33,8 +27,5 @@ pub fn show_game_over(ctx: &mut Rltk) -> GameOverResult {
         );
     }
 
-    match ctx.key {
-        None => GameOverResult::NoResponse,
-        Some(_) => GameOverResult::QuitToMenu,
-    }
+    ctx.key.is_none()
 }

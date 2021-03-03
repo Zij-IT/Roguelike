@@ -8,12 +8,6 @@ pub enum ColorTargets {
     Lava,
 }
 
-pub enum VisualSettings {
-    FullScreen,
-    DynamicColor,
-    ScreenShake,
-    ActiveFont(String),
-    ColorMapping(ColorTargets),
-}
+
 
 pub fn show_vis() {}

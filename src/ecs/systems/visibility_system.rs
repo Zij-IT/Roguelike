@@ -1,5 +1,5 @@
 use crate::{
-    components::{Position, Viewshed},
+    components::{FieldOfView, Position},
     map_builder::map::{Map, TileStatus},
 };
 use rltk::{field_of_view, Point};
@@ -13,7 +13,7 @@ impl<'a> System<'a> for VisibilitySystem {
         ReadExpect<'a, Entity>,
         ReadStorage<'a, Position>,
         WriteExpect<'a, Map>,
-        WriteStorage<'a, Viewshed>,
+        WriteStorage<'a, FieldOfView>,
     );
 
     fn run(&mut self, data: Self::SystemData) {

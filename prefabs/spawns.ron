@@ -24,9 +24,9 @@
                 order: 2,
             ),
             stats: (
-                max_hp: 12,
+                max_hp: 10,
                 defense: 0,
-                power: 2,
+                power: 3,
             ),
         ),
         (
@@ -71,7 +71,7 @@
             stats: (
                 max_hp: 15,
                 defense: 2,
-                power: 1,
+                power: 3,
             ),
         ),
     ],

@@ -1,7 +1,7 @@
 use super::random_table::RandomTable;
 use crate::{
     constants::colors,
-    ecs::components::{CombatStats, Name, Player, Position, Render, SerializeMe, Viewshed},
+    ecs::components::{CombatStats, FieldOfView, Name, Player, Position, Render, SerializeMe},
     map_builder::{
         map::{Map, TileType},
         rect::Rect,
@@ -72,7 +72,7 @@ pub fn spawn_player(ecs: &mut World, x: i32, y: i32) -> Entity {
             colors: ColorPair::new(RGB::named(rltk::YELLOW), RGB::from(colors::BACKGROUND)),
             render_order: 1,
         })
-        .with(Viewshed {
+        .with(FieldOfView {
             visible_tiles: Vec::new(),
             range: 8,
             is_dirty: true,

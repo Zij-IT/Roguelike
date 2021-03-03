@@ -2,10 +2,13 @@ use super::item_structs::RawRender;
 use crate::{components::*, constants::colors, spawning::RandomTable};
 use rltk::ColorPair;
 use serde::Deserialize;
-use specs::saveload::{MarkedBuilder, SimpleMarker};
-use specs::{Builder, Entity, EntityBuilder};
+use specs::{
+    saveload::{MarkedBuilder, SimpleMarker},
+    Builder, Entity, EntityBuilder,
+};
 use std::collections::HashMap;
 
+#[derive(Copy, Clone)]
 pub enum SpawnType {
     AtPosition(i32, i32),
 }
@@ -134,7 +137,7 @@ impl SpawnMaster {
                 .with(MeleeDamageBonus {
                     bonus: weapon.damage_bonus,
                 })
-                .with(Equipable {
+                .with(Equipment {
                     slot: EquipmentSlot::PrimaryHand,
                 });
         }
@@ -144,7 +147,7 @@ impl SpawnMaster {
                 .with(DefenseBonus {
                     bonus: shield.defense_bonus,
                 })
-                .with(Equipable {
+                .with(Equipment {
                     slot: EquipmentSlot::OffHand,
                 })
         }
@@ -172,7 +175,7 @@ impl SpawnMaster {
                 defense: mob_template.stats.defense,
                 power: mob_template.stats.power,
             })
-            .with(Viewshed {
+            .with(FieldOfView {
                 visible_tiles: vec![],
                 range: mob_template.vision_range,
                 is_dirty: true,

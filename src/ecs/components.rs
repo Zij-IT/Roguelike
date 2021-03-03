@@ -76,7 +76,7 @@ impl SufferDamage {
 }
 
 #[derive(Component, ConvertSaveload, Clone)]
-pub struct Viewshed {
+pub struct FieldOfView {
     pub visible_tiles: Vec<rltk::Point>,
     pub range: i32,
     pub is_dirty: bool,
@@ -159,7 +159,7 @@ pub enum EquipmentSlot {
 }
 
 #[derive(Component, Serialize, Deserialize, Clone)]
-pub struct Equipable {
+pub struct Equipment {
     pub slot: EquipmentSlot,
 }
 

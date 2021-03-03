@@ -1,11 +1,11 @@
 use crate::{
+    camera,
     constants::{colors, consoles},
-    ecs::Viewshed,
+    ecs::FieldOfView,
     raws::config::CONFIGS,
-    {camera, EcsWorld},
 };
 use rltk::{Point, Rltk, RGB};
-use specs::{Entity, WorldExt};
+use specs::{Entity, World, WorldExt};
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum TargetResult {
@@ -14,11 +14,11 @@ pub enum TargetResult {
     Selected(Point),
 }
 
-pub fn show_targeting(gs: &mut EcsWorld, ctx: &mut Rltk, range: i32) -> TargetResult {
-    let player_ent = gs.world.fetch::<Entity>();
-    let player_pos = gs.world.fetch::<Point>();
-    let views = gs.world.read_storage::<Viewshed>();
-    let (min_x, max_x, min_y, max_y) = camera::get_screen_bounds(&gs.world);
+pub fn show(world: &World, ctx: &mut Rltk, range: i32) -> TargetResult {
+    let player_ent = world.fetch::<Entity>();
+    let player_pos = world.fetch::<Point>();
+    let views = world.read_storage::<FieldOfView>();
+    let (min_x, max_x, min_y, max_y) = camera::get_screen_bounds(world);
 
     ctx.set_active_console(consoles::MAP_CONSOLE);
 

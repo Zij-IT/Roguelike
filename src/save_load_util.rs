@@ -7,7 +7,6 @@ use specs::{
         SimpleMarkerAllocator,
     },
 };
-
 use std::{fs, path::Path};
 
 const SAVE_PATH: &str = "./saves/savegame.ron";
@@ -55,15 +54,7 @@ pub fn save_game(ecs: &mut World) {
         );
         let writer = std::fs::File::create(SAVE_PATH).unwrap();
 
-        //There is no particular reason to make the save file pretty, but I am messing around with it
-        //anyhow. It makes it a LOT more human readable, but 9x the size. Should the size begin
-        //to approach a megabyte, I will likely end this. Arbitrary limits FTW!
-        let ser_config = {
-            let mut temp = ron::ser::PrettyConfig::default();
-            temp.separate_tuple_members = true;
-            temp
-        };
-        let mut serializer = ron::Serializer::new(writer, Some(ser_config), true).unwrap();
+        let mut serializer = ron::Serializer::new(writer, None, false).unwrap();
         serialize_individually!(
             ecs,
             serializer,
@@ -73,7 +64,7 @@ pub fn save_game(ecs: &mut World) {
             CombatStats,
             Consumable,
             DefenseBonus,
-            Equipable,
+            Equipment,
             Equipped,
             InBackpack,
             InflictsDamage,
@@ -89,7 +80,7 @@ pub fn save_game(ecs: &mut World) {
             Render,
             SerializationHelper,
             SufferDamage,
-            Viewshed,
+            FieldOfView,
             WantsToDropItem,
             WantsToMelee,
             WantsToPickupItem,
@@ -131,7 +122,7 @@ pub fn load_game(ecs: &mut World) {
             CombatStats,
             Consumable,
             DefenseBonus,
-            Equipable,
+            Equipment,
             Equipped,
             InBackpack,
             InflictsDamage,
@@ -147,7 +138,7 @@ pub fn load_game(ecs: &mut World) {
             Render,
             SerializationHelper,
             SufferDamage,
-            Viewshed,
+            FieldOfView,
             WantsToDropItem,
             WantsToMelee,
             WantsToPickupItem,

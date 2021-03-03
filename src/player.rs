@@ -1,18 +1,19 @@
 use super::{
     components::{
-        CombatStats, Item, Monster, Player, Position, Viewshed, WantsToMelee, WantsToPickupItem,
+        CombatStats, FieldOfView, Item, Monster, Player, Position, WantsToMelee, WantsToPickupItem,
     },
     raws::config::CONFIGS,
-    EcsWorld, GameLog, RunState,
+    BashingBytes, GameLog,
 };
 use crate::{
-    gui::InventoryMode,
+    gui::inventory::InvMode,
     map_builder::map::{Map, TileStatus, TileType},
+    state::Gameplay,
 };
-use rltk::{Point, Rltk};
+use rltk::{Point, Rltk, VirtualKeyCode};
 use specs::{Entity, Join, World, WorldExt};
 
-pub fn respond_to_input(gs: &mut EcsWorld, ctx: &mut Rltk) -> RunState {
+pub fn respond_to_input(gs: &mut BashingBytes, ctx: &mut Rltk) -> Gameplay {
     let keys = &CONFIGS.lock().unwrap().keys;
     if let Some(key) = ctx.key {
         if key == keys.move_up {
@@ -36,28 +37,33 @@ pub fn respond_to_input(gs: &mut EcsWorld, ctx: &mut Rltk) -> RunState {
         } else if key == keys.grab_item {
             try_pickup(&mut gs.world);
         } else if key == keys.drop_item {
-            return RunState::Inventory(InventoryMode::Drop);
+            return Gameplay::Inventory(InvMode::Drop);
         } else if key == keys.remove_item {
-            return RunState::Inventory(InventoryMode::Remove);
+            return Gameplay::Inventory(InvMode::Remove);
         } else if key == keys.open_inventory {
-            return RunState::Inventory(InventoryMode::Use);
+            return Gameplay::Inventory(InvMode::Use);
         } else if key == keys.go_back {
-            return RunState::SaveGame;
+            return Gameplay::SaveGame;
         } else if key == keys.wait_turn {
             return skip_turn(&mut gs.world);
+        } else if key == VirtualKeyCode::M {
+            let mut map = gs.world.fetch_mut::<Map>();
+            for tile in 0..map.tiles.len() {
+                map.set_tile_status(tile, TileStatus::Revealed);
+            }
         } else {
-            return RunState::AwaitingInput;
+            return Gameplay::AwaitingInput;
         }
     } else {
-        return RunState::AwaitingInput;
+        return Gameplay::AwaitingInput;
     }
 
-    RunState::PlayerTurn
+    Gameplay::PlayerTurn
 }
 
 fn try_move(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let mut positions = ecs.write_storage::<Position>();
-    let mut viewsheds = ecs.write_storage::<Viewshed>();
+    let mut viewsheds = ecs.write_storage::<FieldOfView>();
     let mut players = ecs.write_storage::<Player>();
     let mut attacks = ecs.write_storage::<WantsToMelee>();
     let entities = ecs.entities();
@@ -138,21 +144,21 @@ fn try_pickup(ecs: &mut World) {
     }
 }
 
-fn try_descend(ecs: &mut World) -> RunState {
+fn try_descend(ecs: &mut World) -> Gameplay {
     let player_pos = ecs.fetch::<Point>();
     let map = ecs.fetch::<Map>();
     let player_idx = map.xy_idx(player_pos.x, player_pos.y);
     if map.tiles[player_idx] == TileType::StairsDown {
-        RunState::NextLevel
+        Gameplay::NextLevel
     } else {
         let mut logs = ecs.fetch_mut::<GameLog>();
         logs.push(&"There is no way down from here.");
-        RunState::AwaitingInput
+        Gameplay::AwaitingInput
     }
 }
 
-fn skip_turn(ecs: &mut World) -> RunState {
-    let viewshed_comps = ecs.read_storage::<Viewshed>();
+fn skip_turn(ecs: &mut World) -> Gameplay {
+    let viewshed_comps = ecs.read_storage::<FieldOfView>();
     let player_ent = ecs.fetch::<Entity>();
     let player_vs = viewshed_comps.get(*player_ent).unwrap();
     let mobs = ecs.read_storage::<Monster>();
@@ -177,5 +183,5 @@ fn skip_turn(ecs: &mut World) -> RunState {
         player_stats.hp = i32::min(player_stats.hp + 1, player_stats.max_hp);
     }
 
-    RunState::PlayerTurn
+    Gameplay::PlayerTurn
 }

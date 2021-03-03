@@ -55,6 +55,7 @@ pub fn render(ecs: &World, ctx: &mut Rltk) {
 
 fn get_tile_glyph(idx: usize, map: &Map) -> (rltk::FontCharType, ColorPair) {
     let bg = colors::BACKGROUND;
+    #[allow(clippy::match_on_vec_items)]
     let (glyph, fg) = match map.tiles[idx] {
         TileType::Wall => (
             35,

@@ -2,36 +2,38 @@ use crate::{
     constants::{colors, consoles},
     ecs::{Equipped, InBackpack, Name},
     raws::config::CONFIGS,
-    {rex_assets, RunState},
+    rex_assets,
+    state::{Gameplay, State, State::Game},
 };
 use rltk::{Rltk, RGB};
 use specs::{Entity, Join, World, WorldExt};
 
 #[derive(PartialEq, Copy, Clone)]
-pub enum ItemMenuResult {
+pub enum InvResult {
     Cancel,
     NoResponse,
     Selected(Entity),
 }
 
 #[derive(PartialEq, Copy, Clone, Debug)]
-pub enum InventoryMode {
+pub enum InvMode {
     Use,
     Drop,
     Remove,
 }
 
-pub fn show_inventory(world: &mut World, ctx: &mut Rltk) -> ItemMenuResult {
+pub fn show(world: &mut World, ctx: &mut Rltk) -> InvResult {
     let player_ent = world.fetch::<Entity>();
-    let current_state = world.fetch::<RunState>();
+    let current_state = world.fetch::<State>();
     let names = world.read_storage::<Name>();
     let entities = world.entities();
 
     //Get all relevant items
     //Unable to simplify to avoid the duplication of the lines .join() .. .collect() because the
     //if arms are of different types.
+    #[allow(clippy::filter_map)]
     let relevant_entities = {
-        if *current_state == RunState::Inventory(InventoryMode::Remove) {
+        if *current_state == Game(Gameplay::Inventory(InvMode::Remove)) {
             let equipped_items = world.read_storage::<Equipped>();
             (&equipped_items, &names, &entities)
                 .join()
@@ -80,14 +82,14 @@ pub fn show_inventory(world: &mut World, ctx: &mut Rltk) -> ItemMenuResult {
     let keys = &CONFIGS.lock().unwrap().keys;
     if let Some(key) = ctx.key {
         return if key == keys.go_back {
-            ItemMenuResult::Cancel
+            InvResult::Cancel
         } else {
             let selection = rltk::letter_to_option(key);
             if selection > -1 && selection < relevant_entities.len() as i32 {
-                return ItemMenuResult::Selected(relevant_entities[selection as usize].1);
+                return InvResult::Selected(relevant_entities[selection as usize].1);
             }
-            ItemMenuResult::NoResponse
+            InvResult::NoResponse
         };
     }
-    ItemMenuResult::NoResponse
+    InvResult::NoResponse
 }
