@@ -50,16 +50,24 @@ pub enum SettingsOption {
 
 #[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr)]
 pub enum AudioOption {
+    #[strum(serialize = "Master Volume")]
     MasterVolume,
-    SoundEffect,
+    #[strum(serialize = "Music Volume")]
     MusicVolume,
+    #[strum(serialize = "Sound Effects")]
+    SoundEffect,
+    Back,
 }
 
 #[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr)]
 pub enum VisualOption {
+    #[strum(serialize = "Full Screen")]
     FullScreen,
+    #[strum(serialize = "Dynamic Color")]
     DynamicColor,
+    #[strum(serialize = "Screen Shake")]
     ScreenShake,
+    Back,
 }
 
 #[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr)]
@@ -69,4 +77,5 @@ pub enum KeyBindingOption {
     Left,
     Right,
     Wait,
+    Back,
 }

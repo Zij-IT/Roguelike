@@ -1,3 +1,5 @@
+mod audio;
+
 use crate::{
     constants::{colors, consoles},
     raws::config::CONFIGS,
