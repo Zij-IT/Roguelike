@@ -6,6 +6,7 @@ use crate::{
 };
 use rltk::{Rltk, RGB};
 use strum::IntoEnumIterator;
+use enum_cycling::IntoEnumCycle;
 
 pub fn show(ctx: &mut Rltk, current_state: MainOption, assets: &RexAssets) -> (MainOption, bool) {
     ctx.set_active_console(consoles::HUD_CONSOLE);
@@ -35,19 +36,9 @@ pub fn show(ctx: &mut Rltk, current_state: MainOption, assets: &RexAssets) -> (M
         if key == keys.select {
             return (current_state, true);
         } else if key == keys.move_up {
-            return match current_state {
-                MainOption::NewGame => (MainOption::Quit, false),
-                MainOption::LoadGame => (MainOption::NewGame, false),
-                MainOption::Settings => (MainOption::LoadGame, false),
-                MainOption::Quit => (MainOption::Settings, false),
-            };
+            return (current_state.up(), false);
         } else if key == keys.move_down {
-            return match current_state {
-                MainOption::NewGame => (MainOption::LoadGame, false),
-                MainOption::LoadGame => (MainOption::Settings, false),
-                MainOption::Settings => (MainOption::Quit, false),
-                MainOption::Quit => (MainOption::NewGame, false),
-            };
+            return (current_state.down(), false);
         }
     }
 

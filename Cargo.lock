@@ -582,6 +582,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
 [[package]]
+name = "enum_cycling"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3c303d5eaa08b70dfe432eb2cf51b39cd7382155397037fe381d6fb84fb398d"
+dependencies = [
+ "enum_cycling_derive",
+]
+
+[[package]]
+name = "enum_cycling_derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ab1f5fb0b545771232225533ccb71a6e31aa0a2821914235c18a505a2a7f44e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "flate2"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1501,6 +1521,7 @@ dependencies = [
 name = "roguelike"
 version = "0.1.0"
 dependencies = [
+ "enum_cycling",
  "lazy_static",
  "rltk",
  "ron",

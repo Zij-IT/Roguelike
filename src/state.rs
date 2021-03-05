@@ -1,5 +1,6 @@
 use super::gui;
 use strum::{AsRefStr, EnumIter};
+use enum_cycling::{EnumCycle, IntoEnumCycle};
 
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum State {
@@ -30,7 +31,7 @@ pub enum Menu {
 }
 
 //Menu Options
-#[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr)]
+#[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr, EnumCycle)]
 pub enum MainOption {
     #[strum(serialize = "Start Anew")]
     NewGame,
@@ -40,15 +41,16 @@ pub enum MainOption {
     Quit,
 }
 
-#[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr)]
+#[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr, EnumCycle)]
 pub enum SettingsOption {
     Audio,
     Visual,
     Keybindings,
+    #[skip]
     Back,
 }
 
-#[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr)]
+#[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr, EnumCycle)]
 pub enum AudioOption {
     #[strum(serialize = "Master Volume")]
     MasterVolume,
@@ -56,6 +58,7 @@ pub enum AudioOption {
     MusicVolume,
     #[strum(serialize = "Sound Effects")]
     SoundEffect,
+    #[skip]
     Back,
 }
 

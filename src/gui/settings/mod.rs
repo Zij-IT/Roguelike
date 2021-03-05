@@ -8,6 +8,7 @@ use crate::{
 };
 use rltk::{Rltk, RGB};
 use strum::IntoEnumIterator;
+use enum_cycling::IntoEnumCycle;
 
 pub fn show_settings_menu(
     ctx: &mut Rltk,
@@ -45,19 +46,9 @@ pub fn show_settings_menu(
         } else if key == keys.go_back {
             return (SettingsOption::Back, true);
         } else if key == keys.move_up {
-            return match current_state {
-                SettingsOption::Audio => (SettingsOption::Keybindings, false),
-                SettingsOption::Visual => (SettingsOption::Audio, false),
-                SettingsOption::Keybindings => (SettingsOption::Visual, false),
-                SettingsOption::Back => unreachable!(),
-            };
+            return (current_state.up(), false);
         } else if key == keys.move_down {
-            return match current_state {
-                SettingsOption::Audio => (SettingsOption::Visual, false),
-                SettingsOption::Visual => (SettingsOption::Keybindings, false),
-                SettingsOption::Keybindings => (SettingsOption::Audio, false),
-                SettingsOption::Back => unreachable!(),
-            };
+            return (current_state.down(), false);
         }
     }
 
