@@ -1,18 +1,20 @@
-use super::config_structs::{KeyBinds, VisualEffects};
+use super::config_structs::{AudioConfigs, KeyBinds, VisualConfigs};
 use serde::Deserialize;
 use serde::Serialize;
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct ConfigMaster {
+pub struct Config {
     pub keys: KeyBinds,
-    pub visuals: VisualEffects,
+    pub visual: VisualConfigs,
+    pub audio: AudioConfigs,
 }
 
-impl ConfigMaster {
+impl Config {
     pub const fn new() -> Self {
         Self {
             keys: KeyBinds::new(),
-            visuals: VisualEffects::new(),
+            visual: VisualConfigs::new(),
+            audio: AudioConfigs::new(),
         }
     }
     pub fn load_config(&mut self, desired_config: Self) {

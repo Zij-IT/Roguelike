@@ -1,16 +1,19 @@
-mod audio;
+pub mod audio;
+pub mod keybindings;
+pub mod visual;
 
 use crate::{
     constants::{colors, consoles},
-    raws::config::CONFIGS,
+    raws::config::Config,
     rex_assets,
     state::SettingsOption,
 };
+use enum_cycling::IntoEnumCycle;
 use rltk::{Rltk, RGB};
 use strum::IntoEnumIterator;
-use enum_cycling::IntoEnumCycle;
 
 pub fn show_settings_menu(
+    configs: &Config,
     ctx: &mut Rltk,
     current_state: SettingsOption,
     assets: &rex_assets::RexAssets,
@@ -19,7 +22,7 @@ pub fn show_settings_menu(
     ctx.render_xp_sprite(&assets.blank_settings, 0, 0);
 
     let yellow = RGB::named(rltk::YELLOW);
-    let base_y = 3;
+    let base_y = 2;
     let step = 2;
 
     for (index, option) in SettingsOption::iter().enumerate() {
@@ -38,7 +41,7 @@ pub fn show_settings_menu(
         }
     }
 
-    let keys = &CONFIGS.lock().unwrap().keys;
+    let keys = &configs.keys;
 
     if let Some(key) = ctx.key {
         if key == keys.select {

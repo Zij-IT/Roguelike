@@ -1,31 +1,21 @@
-mod config_master;
+mod config;
 mod config_structs;
 
-use config_master::ConfigMaster;
-use std::sync::Mutex;
+pub use config::Config;
 
-#[rustfmt::skip]
-macro_rules! config_path {
-    () => ("../../../prefabs/config.ron")
+pub fn load() -> Result<Config, Config> {
+    let config = include_bytes!("../../../prefabs/config.ron");
+
+    return match ron::de::from_bytes(config) {
+        Ok(config) => Ok(config),
+        Err(_) => Err(Config::new()),
+    };
 }
 
-lazy_static::lazy_static! {
-    pub static ref CONFIGS: Mutex<ConfigMaster> = Mutex::new(ConfigMaster::new());
-}
+pub fn save(current_configs: &Config) -> ron::Result<()> {
+    let writer = std::fs::File::create("./prefabs/config.ron").unwrap();
 
-rltk::embedded_resource!(CONFIG_RAW, config_path!());
+    let pretty = ron::ser::PrettyConfig::new();
 
-pub fn load() -> Result<(), ()> {
-    rltk::link_resource!(CONFIG_RAW, config_path!());
-    let config_as_bytes = rltk::embedding::EMBED
-        .lock()
-        .get_resource(config_path!().to_string())
-        .unwrap();
-
-    if let Ok(configs) = ron::de::from_bytes(config_as_bytes) {
-        CONFIGS.lock().unwrap().load_config(configs);
-        return Ok(());
-    }
-
-    Err(())
+    ron::ser::to_writer_pretty(writer, current_configs, pretty)
 }

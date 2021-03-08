@@ -2,7 +2,7 @@ use crate::{
     camera,
     constants::{colors, consoles},
     ecs::FieldOfView,
-    raws::config::CONFIGS,
+    raws::config::Config,
 };
 use rltk::{Point, Rltk, RGB};
 use specs::{Entity, World, WorldExt};
@@ -14,7 +14,7 @@ pub enum TargetResult {
     Selected(Point),
 }
 
-pub fn show(world: &World, ctx: &mut Rltk, range: i32) -> TargetResult {
+pub fn show(configs: &Config, world: &World, ctx: &mut Rltk, range: i32) -> TargetResult {
     let player_ent = world.fetch::<Entity>();
     let player_pos = world.fetch::<Point>();
     let views = world.read_storage::<FieldOfView>();
@@ -67,7 +67,7 @@ pub fn show(world: &World, ctx: &mut Rltk, range: i32) -> TargetResult {
         };
     }
 
-    if Some(CONFIGS.lock().unwrap().keys.go_back) == ctx.key {
+    if Some(configs.keys.go_back) == ctx.key {
         return TargetResult::Cancel;
     }
 

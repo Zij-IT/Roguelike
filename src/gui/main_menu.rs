@@ -1,14 +1,19 @@
 use crate::{
     constants::{colors, consoles},
-    raws::config::CONFIGS,
+    raws::config::Config,
     rex_assets::RexAssets,
     state::MainOption,
 };
+use enum_cycling::IntoEnumCycle;
 use rltk::{Rltk, RGB};
 use strum::IntoEnumIterator;
-use enum_cycling::IntoEnumCycle;
 
-pub fn show(ctx: &mut Rltk, current_state: MainOption, assets: &RexAssets) -> (MainOption, bool) {
+pub fn show(
+    configs: &Config,
+    ctx: &mut Rltk,
+    current_state: MainOption,
+    assets: &RexAssets,
+) -> (MainOption, bool) {
     ctx.set_active_console(consoles::HUD_CONSOLE);
     ctx.render_xp_sprite(&assets.title_screen, 0, 0);
 
@@ -30,7 +35,7 @@ pub fn show(ctx: &mut Rltk, current_state: MainOption, assets: &RexAssets) -> (M
         );
     }
 
-    let keys = &CONFIGS.lock().unwrap().keys;
+    let keys = &configs.keys;
 
     if let Some(key) = ctx.key {
         if key == keys.select {

@@ -2,7 +2,6 @@ use super::{
     components::{
         CombatStats, FieldOfView, Item, Monster, Player, Position, WantsToMelee, WantsToPickupItem,
     },
-    raws::config::CONFIGS,
     BashingBytes, GameLog,
 };
 use crate::{
@@ -13,29 +12,29 @@ use crate::{
 use rltk::{Point, Rltk, VirtualKeyCode};
 use specs::{Entity, Join, World, WorldExt};
 
-pub fn respond_to_input(gs: &mut BashingBytes, ctx: &mut Rltk) -> Gameplay {
-    let keys = &CONFIGS.lock().unwrap().keys;
+pub fn respond_to_input(game: &mut BashingBytes, ctx: &mut Rltk) -> Gameplay {
+    let keys = &game.configs.keys;
     if let Some(key) = ctx.key {
         if key == keys.move_up {
-            try_move(0, -1, &mut gs.world);
+            try_move(0, -1, &mut game.world);
         } else if key == keys.move_down {
-            try_move(0, 1, &mut gs.world);
+            try_move(0, 1, &mut game.world);
         } else if key == keys.move_left {
-            try_move(-1, 0, &mut gs.world);
+            try_move(-1, 0, &mut game.world);
         } else if key == keys.move_right {
-            try_move(1, 0, &mut gs.world);
+            try_move(1, 0, &mut game.world);
         } else if key == keys.move_up_left {
-            try_move(-1, -1, &mut gs.world);
+            try_move(-1, -1, &mut game.world);
         } else if key == keys.move_up_right {
-            try_move(1, -1, &mut gs.world);
+            try_move(1, -1, &mut game.world);
         } else if key == keys.move_down_left {
-            try_move(-1, 1, &mut gs.world);
+            try_move(-1, 1, &mut game.world);
         } else if key == keys.move_down_right {
-            try_move(1, 1, &mut gs.world);
+            try_move(1, 1, &mut game.world);
         } else if key == keys.descend {
-            return try_descend(&mut gs.world);
+            return try_descend(&mut game.world);
         } else if key == keys.grab_item {
-            try_pickup(&mut gs.world);
+            try_pickup(&mut game.world);
         } else if key == keys.drop_item {
             return Gameplay::Inventory(InvMode::Drop);
         } else if key == keys.remove_item {
@@ -45,12 +44,9 @@ pub fn respond_to_input(gs: &mut BashingBytes, ctx: &mut Rltk) -> Gameplay {
         } else if key == keys.go_back {
             return Gameplay::SaveGame;
         } else if key == keys.wait_turn {
-            return skip_turn(&mut gs.world);
+            return skip_turn(&mut game.world);
         } else if key == VirtualKeyCode::M {
-            let mut map = gs.world.fetch_mut::<Map>();
-            for tile in 0..map.tiles.len() {
-                map.set_tile_status(tile, TileStatus::Revealed);
-            }
+            //Cheat key :D
         } else {
             return Gameplay::AwaitingInput;
         }

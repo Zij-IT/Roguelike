@@ -1,7 +1,7 @@
 use crate::{
     constants::{colors, consoles},
     ecs::{Equipped, InBackpack, Name},
-    raws::config::CONFIGS,
+    raws::config::Config,
     rex_assets,
     state::{Gameplay, State, State::Game},
 };
@@ -22,7 +22,7 @@ pub enum InvMode {
     Remove,
 }
 
-pub fn show(world: &mut World, ctx: &mut Rltk) -> InvResult {
+pub fn show(configs: &Config, world: &mut World, ctx: &mut Rltk) -> InvResult {
     let player_ent = world.fetch::<Entity>();
     let current_state = world.fetch::<State>();
     let names = world.read_storage::<Name>();
@@ -79,7 +79,7 @@ pub fn show(world: &mut World, ctx: &mut Rltk) -> InvResult {
     }
 
     //Respond to players response
-    let keys = &CONFIGS.lock().unwrap().keys;
+    let keys = &configs.keys;
     if let Some(key) = ctx.key {
         return if key == keys.go_back {
             InvResult::Cancel

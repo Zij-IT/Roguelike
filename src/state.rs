@@ -1,6 +1,6 @@
 use super::gui;
-use strum::{AsRefStr, EnumIter};
 use enum_cycling::{EnumCycle, IntoEnumCycle};
+use strum::{AsRefStr, EnumIter};
 
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum State {
@@ -50,19 +50,19 @@ pub enum SettingsOption {
     Back,
 }
 
-#[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr, EnumCycle)]
+#[derive(PartialEq, Copy, Clone, Debug, AsRefStr, EnumCycle)]
 pub enum AudioOption {
     #[strum(serialize = "Master Volume")]
     MasterVolume,
     #[strum(serialize = "Music Volume")]
     MusicVolume,
     #[strum(serialize = "Sound Effects")]
-    SoundEffect,
+    SfxVolume,
     #[skip]
     Back,
 }
 
-#[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr)]
+#[derive(PartialEq, Copy, Clone, Debug, AsRefStr, EnumCycle)]
 pub enum VisualOption {
     #[strum(serialize = "Full Screen")]
     FullScreen,
@@ -70,15 +70,41 @@ pub enum VisualOption {
     DynamicColor,
     #[strum(serialize = "Screen Shake")]
     ScreenShake,
+    #[strum(serialize = "Active Font")]
+    ActiveFont,
+    #[strum(serialize = "Color Mapping")]
+    ColorMapping,
+    #[skip]
     Back,
 }
 
-#[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr)]
+#[derive(PartialEq, Copy, Clone, Debug, AsRefStr, EnumCycle, EnumIter)]
 pub enum KeyBindingOption {
+    Right,
+    Left,
     Up,
     Down,
-    Left,
-    Right,
-    Wait,
+    #[strum(serialize = "Up & Right")]
+    UpRight,
+    #[strum(serialize = "Up & Left")]
+    UpLeft,
+    #[strum(serialize = "Down & Right")]
+    DownRight,
+    #[strum(serialize = "Down & Left")]
+    DownLeft,
+    Descend,
+    Inventory,
+    #[strum(serialize = "Grab Item")]
+    GrabItem,
+    #[strum(serialize = "Drop Item")]
+    DropItem,
+    #[strum(serialize = "Remove Item")]
+    RemoveItem,
+    #[strum(serialize = "Back")]
+    GoBack,
+    #[strum(serialize = "Wait a Turn")]
+    WaitTurn,
+    Select,
+    #[skip]
     Back,
 }

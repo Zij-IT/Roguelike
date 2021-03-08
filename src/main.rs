@@ -46,10 +46,10 @@ use player::respond_to_input;
 use state::{
     AudioOption, Gameplay,
     Gameplay::{AwaitingInput, PreRun},
-    KeyBindingOption, MainOption, Menu, SettingsOption, State,
-    State::Game,
-    VisualOption,
+    KeyBindingOption, MainOption, Menu, SettingsOption, State, VisualOption,
 };
+use rodio::Source;
+use std::io::BufReader;
 
 //Macros
 ///Given a specs::World, and a list of components, it registers all components in the world
@@ -77,6 +77,9 @@ const MAP_WIDTH: i32 = 64;
 //Main construct
 pub struct BashingBytes {
     pub world: World,
+    pub configs: raws::config::Config,
+    pub music_sink: rodio::Sink,
+    pub sfx_sink: rodio::Sink,
 }
 
 impl BashingBytes {
@@ -181,7 +184,7 @@ impl BashingBytes {
                 let main_menu_res = {
                     //Assets are fetched here to please the borrow checker!
                     let assets = self.world.fetch::<rex_assets::RexAssets>();
-                    gui::main_menu::show(ctx, option, &*assets)
+                    gui::main_menu::show(&self.configs, ctx, option, &*assets)
                 };
 
                 match main_menu_res {
@@ -207,7 +210,7 @@ impl BashingBytes {
             }
             Menu::Settings(option) => {
                 let assets = &*self.world.fetch::<rex_assets::RexAssets>();
-                match gui::settings::show_settings_menu(ctx, option, assets) {
+                match gui::settings::show_settings_menu(&self.configs, ctx, option, assets) {
                     (new_option, false) => State::Menu(Menu::Settings(new_option)),
                     (new_option, true) => match new_option {
                         SettingsOption::Audio => {
@@ -219,13 +222,44 @@ impl BashingBytes {
                         SettingsOption::Keybindings => {
                             State::Menu(Menu::Keybinding(KeyBindingOption::Up))
                         }
-                        SettingsOption::Back => State::Menu(Menu::Main(MainOption::Settings)),
+                        SettingsOption::Back => {
+                            if raws::config::save(&self.configs).is_err() {
+                                //todo!()
+                                //Inform player of error in saving configs
+                            }
+                            State::Menu(Menu::Main(MainOption::Settings))
+                        }
                     },
                 }
             }
-            Menu::Audio(_option) => todo!(),
-            Menu::Visual(_option) => todo!(),
-            Menu::Keybinding(_option) => todo!(),
+            Menu::Audio(option) => {
+                let assets = &*self.world.fetch::<rex_assets::RexAssets>();
+                let new_opt = gui::settings::audio::show(&mut self.configs, &self.music_sink, &self.sfx_sink, ctx, option, assets);
+                if new_opt == AudioOption::Back {
+                    State::Menu(Menu::Settings(SettingsOption::Audio))
+                } else {
+                    State::Menu(Menu::Audio(new_opt))
+                }
+            }
+            Menu::Visual(option) => {
+                let assets = &*self.world.fetch::<rex_assets::RexAssets>();
+                let new_opt = gui::settings::visual::show(&mut self.configs, ctx, option, assets);
+                if new_opt == VisualOption::Back {
+                    State::Menu(Menu::Settings(SettingsOption::Visual))
+                } else {
+                    State::Menu(Menu::Visual(new_opt))
+                }
+            }
+            Menu::Keybinding(option) => {
+                let assets = &*self.world.fetch::<rex_assets::RexAssets>();
+                let new_opt =
+                    gui::settings::keybindings::show(&mut self.configs, ctx, option, assets);
+                if new_opt == KeyBindingOption::Back {
+                    State::Menu(Menu::Settings(SettingsOption::Keybindings))
+                } else {
+                    State::Menu(Menu::Keybinding(new_opt))
+                }
+            }
         }
     }
 
@@ -233,53 +267,55 @@ impl BashingBytes {
         match current_state {
             Gameplay::PreRun => {
                 ecs::pre_run_systems::execute(&mut self.world);
-                Game(Gameplay::AwaitingInput)
+                State::Game(Gameplay::AwaitingInput)
             }
-            Gameplay::AwaitingInput => Game(respond_to_input(self, ctx)),
+            Gameplay::AwaitingInput => State::Game(respond_to_input(self, ctx)),
             Gameplay::PlayerTurn => {
                 ecs::all_systems::execute(&mut self.world);
-                Game(Gameplay::MonsterTurn)
+                State::Game(Gameplay::MonsterTurn)
             }
             Gameplay::MonsterTurn => {
                 ecs::all_systems::execute(&mut self.world);
-                Game(Gameplay::AwaitingInput)
+                State::Game(Gameplay::AwaitingInput)
             }
-            Gameplay::Inventory(mode) => match gui::inventory::show(&mut self.world, ctx) {
-                InvResult::Cancel => Game(Gameplay::AwaitingInput),
-                InvResult::NoResponse => Game(current_state),
-                InvResult::Selected(item) => match mode {
-                    InvMode::Use => self.world.read_storage::<Range>().get(item).map_or_else(
-                        || {
-                            let mut intent = self.world.write_storage::<WantsToUseItem>();
+            Gameplay::Inventory(mode) => {
+                match gui::inventory::show(&self.configs, &mut self.world, ctx) {
+                    InvResult::Cancel => State::Game(Gameplay::AwaitingInput),
+                    InvResult::NoResponse => State::Game(current_state),
+                    InvResult::Selected(item) => match mode {
+                        InvMode::Use => self.world.read_storage::<Range>().get(item).map_or_else(
+                            || {
+                                let mut intent = self.world.write_storage::<WantsToUseItem>();
+                                intent
+                                    .insert(
+                                        *self.world.fetch::<Entity>(),
+                                        WantsToUseItem { item, target: None },
+                                    )
+                                    .expect("Unable to insert intent");
+                                State::Game(Gameplay::PlayerTurn)
+                            },
+                            |range| State::Game(Gameplay::ShowTargeting(range.range, item)),
+                        ),
+                        InvMode::Drop => {
+                            let mut intent = self.world.write_storage::<WantsToDropItem>();
                             intent
-                                .insert(
-                                    *self.world.fetch::<Entity>(),
-                                    WantsToUseItem { item, target: None },
-                                )
-                                .expect("Unable to insert intent");
-                            Game(Gameplay::PlayerTurn)
-                        },
-                        |range| Game(Gameplay::ShowTargeting(range.range, item)),
-                    ),
-                    InvMode::Drop => {
-                        let mut intent = self.world.write_storage::<WantsToDropItem>();
-                        intent
-                            .insert(*self.world.fetch::<Entity>(), WantsToDropItem { item })
-                            .expect("Unable to insert intent to drop item");
-                        Game(Gameplay::PlayerTurn)
-                    }
-                    InvMode::Remove => {
-                        let mut intent = self.world.write_storage::<WantsToRemoveItem>();
-                        intent
-                            .insert(*self.world.fetch::<Entity>(), WantsToRemoveItem { item })
-                            .expect("Unable to insert intent to remove item");
-                        Game(Gameplay::PlayerTurn)
-                    }
-                },
-            },
+                                .insert(*self.world.fetch::<Entity>(), WantsToDropItem { item })
+                                .expect("Unable to insert intent to drop item");
+                            State::Game(Gameplay::PlayerTurn)
+                        }
+                        InvMode::Remove => {
+                            let mut intent = self.world.write_storage::<WantsToRemoveItem>();
+                            intent
+                                .insert(*self.world.fetch::<Entity>(), WantsToRemoveItem { item })
+                                .expect("Unable to insert intent to remove item");
+                            State::Game(Gameplay::PlayerTurn)
+                        }
+                    },
+                }
+            }
             Gameplay::NextLevel => {
                 self.goto_next_level();
-                Game(Gameplay::PreRun)
+                State::Game(Gameplay::PreRun)
             }
             Gameplay::SaveGame => {
                 save_load_util::save_game(&mut self.world);
@@ -287,16 +323,16 @@ impl BashingBytes {
             }
             Gameplay::GameOver => {
                 if gui::game_over::show(ctx) {
-                    Game(current_state)
+                    State::Game(current_state)
                 } else {
                     self.game_over_cleanup();
                     State::Menu(Menu::Main(MainOption::NewGame))
                 }
             }
             Gameplay::ShowTargeting(range, item) => {
-                match gui::targeting::show(&self.world, ctx, range) {
-                    TargetResult::NoResponse => Game(current_state),
-                    TargetResult::Cancel => Game(Gameplay::AwaitingInput),
+                match gui::targeting::show(&self.configs, &self.world, ctx, range) {
+                    TargetResult::NoResponse => State::Game(current_state),
+                    TargetResult::Cancel => State::Game(Gameplay::AwaitingInput),
                     TargetResult::Selected(target) => {
                         let mut intent = self.world.write_storage::<WantsToUseItem>();
                         intent
@@ -308,7 +344,7 @@ impl BashingBytes {
                                 },
                             )
                             .expect("Unable to insert intent");
-                        Game(Gameplay::PlayerTurn)
+                        State::Game(Gameplay::PlayerTurn)
                     }
                 }
             }
@@ -346,38 +382,64 @@ impl GameState for BashingBytes {
     }
 }
 
-rltk::embedded_resource!(GAME_FONT, "../resources/cp437_8x8.png");
+//This macro uses include_bytes, which is means that the path is relative to the file that it is called in
 
 fn main() -> BError {
-    //Load Configurations for the game
-    if raws::config::load().is_err() {
-        //Let player know that the config file wasn't able to be read, and that the defaults
-        //will be used
-        todo!()
-    }
+    //Load fonts
+    rltk::embedded_resource!(GAME_FONT, "../resources/fonts/cp437_8x8.png");
+    rltk::link_resource!(GAME_FONT, "../resources/fonts/cp437_8x8.png");
 
-    let full_screen = raws::config::CONFIGS.lock().unwrap().visuals.full_screen;
+    //Load Configurations for the game
+    let configs = match raws::config::load() {
+        Ok(config) => config,
+        Err(config) => {
+            //todo!()
+            //Inform player of error in reading config file, and that defaults are being used
+            config
+        }
+    };
 
     //Create RltkBuilder
-    rltk::link_resource!(GAME_FONT, "/resources/cp437_8x8.png");
     let context = RltkBuilder::new()
         .with_title("Bashing Bytes")
-        .with_font("cp437_8x8.png", 8, 8)
-        .with_fullscreen(full_screen)
+        .with_font("fonts/cp437_8x8.png", 8, 8)
+        .with_fullscreen(configs.visual.full_screen)
         .with_dimensions(80, 60)
-        .with_simple_console(80, 60, "cp437_8x8.png") // map
-        .with_simple_console_no_bg(80, 60, "cp437_8x8.png") // creatures
-        .with_sparse_console(80, 60, "cp437_8x8.png") // hud
-        .with_tile_dimensions(8, 8)
+        .with_simple_console(80, 60, "fonts/cp437_8x8.png") // map
+        .with_simple_console_no_bg(80, 60, "fonts/cp437_8x8.png") // creatures
+        .with_sparse_console(80, 60, "fonts/cp437_8x8.png") // hud
         .build()?;
+
+    //Volume
+    let master_volume : f32 = configs.audio.master_volume as f32 / 25.0;
+    let music_volume: f32 = configs.audio.music_volume as f32 / 25.0;
+    let sfx_volume: f32 = configs.audio.sfx_volume as f32 / 25.0;
+
+    //Set up music sink
+    let (_music_stream, music_handle) = rodio::OutputStream::try_default().unwrap();
+    let music_sink = rodio::Sink::try_new(&music_handle).unwrap();
+
+    let file = std::fs::File::open("./resources/audio/main_theme.ogg").unwrap();
+    let source = rodio::Decoder::new(BufReader::new(file)).unwrap().repeat_infinite();
+
+    music_sink.set_volume(master_volume * music_volume);
+    music_sink.append(source);
+
+    //Set up sfx sink
+    let (_sfx_stream, sfx_handle) = rodio::OutputStream::try_default().unwrap();
+    let sfx_sink = rodio::Sink::try_new(&sfx_handle).unwrap();
+    sfx_sink.set_volume(master_volume * sfx_volume);
 
     //Build world
     let mut bashing_bytes = BashingBytes {
         world: World::new(),
+        configs,
+        music_sink,
+        sfx_sink,
     };
 
     //Register the components
-    //gs.ecs must be first, otherwise irrelevant
+    //specs::World must be first, otherwise irrelevant
     register_all!(
         bashing_bytes.world,
         AreaOfEffect,

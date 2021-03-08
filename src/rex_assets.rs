@@ -1,53 +1,41 @@
 use rltk::rex::XpFile;
 
-//In rust you are not able to use const string slices inside of macros, and because I don't want to
-//type the same thing multiple times and have an error result out of that, I am using a macro as a
-//constant. If that is too dirty for you, I suggest you avert your eyes.
+//This bypasses having to load the resource in the rltk::EMBED struct which is normally done when a resource
+//is loaded. As I am just collecting the files here, I do not need the files being stored in two
+//separate locations.
 
-#[rustfmt::skip]
-macro_rules! title_screen_path {
-    () => ("../resources/title_screen.xp")
+macro_rules! xp_from_path {
+    ($filename : expr) => {{
+        let byte_vec = include_bytes!($filename)
+            .into_iter()
+            .map(|x| *x)
+            .collect::<Vec<u8>>();
+
+        //&*byte_vec -> a reference to a slice of u8. &mut -> Mutable reference to the slice reference
+        XpFile::read(&mut &*byte_vec).expect("Unable to load resource")
+    }};
 }
-
-#[rustfmt::skip]
-macro_rules! blank_ui_path {
-    () => ("../resources/b_ui.xp")
-}
-
-#[rustfmt::skip]
-macro_rules! blank_inventory_path {
-    () => ("../resources/b_inventory.xp")
-}
-
-#[rustfmt::skip]
-macro_rules! blank_settings_path {
-    () => ("../resources/b_settings.xp")
-}
-
-rltk::embedded_resource!(TITLE_SCREEN, title_screen_path!());
-rltk::embedded_resource!(BLANK_UI, blank_ui_path!());
-rltk::embedded_resource!(BLANK_INV, blank_inventory_path!());
-rltk::embedded_resource!(BLANK_SET, blank_settings_path!());
 
 pub struct RexAssets {
     pub title_screen: XpFile,
     pub blank_ui: XpFile,
     pub blank_inv: XpFile,
     pub blank_settings: XpFile,
+    pub blank_audio: XpFile,
+    pub blank_visual: XpFile,
+    pub blank_keybindings: XpFile,
 }
 
 impl RexAssets {
     pub fn new() -> Self {
-        rltk::link_resource!(TITLE_SCREEN, title_screen_path!());
-        rltk::link_resource!(BLANK_UI, blank_ui_path!());
-        rltk::link_resource!(BLANK_INV, blank_inventory_path!());
-        rltk::link_resource!(BLANK_SET, blank_settings_path!());
-
         Self {
-            title_screen: XpFile::from_resource(title_screen_path!()).unwrap(),
-            blank_ui: XpFile::from_resource(blank_ui_path!()).unwrap(),
-            blank_inv: XpFile::from_resource(blank_inventory_path!()).unwrap(),
-            blank_settings: XpFile::from_resource(blank_settings_path!()).unwrap(),
+            title_screen: xp_from_path!("../resources/title_screen.xp"),
+            blank_ui: xp_from_path!("../resources/b_ui.xp"),
+            blank_inv: xp_from_path!("../resources/b_inventory.xp"),
+            blank_settings: xp_from_path!("../resources/b_settings.xp"),
+            blank_audio: xp_from_path!("../resources/b_audio.xp"),
+            blank_visual: xp_from_path!("../resources/b_visual.xp"),
+            blank_keybindings: xp_from_path!("../resources/b_keybindings.xp"),
         }
     }
 }

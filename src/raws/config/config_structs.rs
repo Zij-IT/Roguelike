@@ -1,3 +1,4 @@
+use crate::gui::settings::visual;
 use rltk::VirtualKeyCode;
 use serde::Deserialize;
 use serde::Serialize;
@@ -411,18 +412,37 @@ impl KeyBinds {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct VisualEffects {
+pub struct VisualConfigs {
     pub full_screen: bool,
     pub screen_shake: bool,
     pub dynamic_color: bool,
+    pub active_font: visual::Font,
 }
 
-impl VisualEffects {
+impl VisualConfigs {
     pub const fn new() -> Self {
         Self {
             full_screen: false,
             screen_shake: false,
             dynamic_color: false,
+            active_font: visual::Font::Default,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AudioConfigs {
+    pub master_volume: usize,
+    pub music_volume: usize,
+    pub sfx_volume: usize,
+}
+
+impl AudioConfigs {
+    pub const fn new() -> Self {
+        Self {
+            master_volume: 0,
+            music_volume: 0,
+            sfx_volume: 0,
         }
     }
 }

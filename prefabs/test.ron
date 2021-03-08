@@ -18,14 +18,14 @@
         select: Return,
     ),
     visual: (
-        full_screen: true,
+        full_screen: false,
         screen_shake: false,
         dynamic_color: false,
         active_font: Default,
     ),
     audio: (
-        master_volume: 13,
-        music_volume: 23,
-        sfx_volume: 23,
+        master_volume: 0,
+        music_volume: 0,
+        sfx_volume: 0,
     ),
 )
