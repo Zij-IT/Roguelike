@@ -6,6 +6,7 @@ use crate::{
 };
 use enum_cycling::IntoEnumCycle;
 use rltk::{Rltk, VirtualKeyCode, RGB};
+use std::sync::atomic::{AtomicBool, Ordering};
 use strum::IntoEnumIterator;
 
 pub fn show(
@@ -13,10 +14,93 @@ pub fn show(
     ctx: &mut Rltk,
     current_option: KeyBindingOption,
     assets: &RexAssets,
-) -> KeyBindingOption {
+) -> (KeyBindingOption, bool) {
     ctx.set_active_console(consoles::HUD_CONSOLE);
     ctx.render_xp_sprite(&assets.blank_keybindings, 0, 0);
 
+    draw_all_keys(configs, ctx, current_option);
+
+    let keys = &configs.keys;
+
+    if let Some(key) = ctx.key {
+        if key == keys.move_up {
+            return (current_option.up(), false);
+        } else if key == keys.move_down {
+            return (current_option.down(), false);
+        } else if key == keys.go_back {
+            return (KeyBindingOption::Back, false);
+        } else if key == keys.select {
+            return (current_option, true);
+        }
+    }
+    (current_option, false)
+}
+
+pub fn key_selected(
+    configs: &mut Config,
+    ctx: &mut Rltk,
+    current_option: KeyBindingOption,
+    assets: &RexAssets,
+) -> bool {
+    lazy_static::lazy_static! {
+        static ref BAD_KEY_CHOSEN: AtomicBool = AtomicBool::new(false);
+    }
+
+    ctx.render_xp_sprite(&assets.blank_keybindings, 0, 0);
+
+    let (half_width, half_height) = {
+        let (w, h) = ctx.get_char_size();
+        (w as i32 / 2, h as i32 / 2)
+    };
+
+    let box_width = 22;
+    let box_height = 10;
+
+    draw_all_keys(configs, ctx, current_option);
+
+    ctx.draw_box(
+        half_width - box_width / 2,
+        half_height - box_height,
+        box_width,
+        box_height,
+        RGB::named(colors::FOREGROUND),
+        RGB::named(colors::BACKGROUND),
+    );
+
+    ctx.print_color_centered(
+        half_height - box_height / 2 - 4,
+        RGB::named(colors::FOREGROUND),
+        RGB::named(colors::BACKGROUND),
+        "Press A Key",
+    );
+
+    if BAD_KEY_CHOSEN.load(Ordering::Relaxed) {
+        ctx.print_color_centered(
+            half_height - 4,
+            RGB::named(rltk::RED),
+            RGB::named(colors::BACKGROUND),
+            "Key already assigned.",
+        );
+        ctx.print_color_centered(
+            half_height - 3,
+            RGB::named(rltk::RED),
+            RGB::named(colors::BACKGROUND),
+            "Please try again.",
+        );
+    }
+
+    if let Some(key) = ctx.key {
+        if KeyBindingOption::iter().all(|option| *option_to_config(configs, option) != key) {
+            *option_to_config(configs, current_option) = key;
+            BAD_KEY_CHOSEN.store(false, Ordering::Relaxed);
+            return true;
+        }
+        BAD_KEY_CHOSEN.store(true, Ordering::Relaxed);
+    }
+    false
+}
+
+fn draw_all_keys(configs: &mut Config, ctx: &mut Rltk, current_option: KeyBindingOption) {
     let yellow = RGB::named(rltk::YELLOW);
     let bg = colors::BACKGROUND;
 
@@ -29,49 +113,34 @@ pub fn show(
             if current_option == option {
                 ctx.print_color(x, y, yellow, bg, current_option.as_ref());
             }
-            let key = vlc_to_str(option_to_vlc(configs, option));
+            let key = vlc_to_str(*option_to_config(configs, option));
             ctx.print_color(42, y, RGB::named(colors::FOREGROUND), bg, key);
         }
     }
-
-    let keys = &configs.keys;
-
-    if let Some(key) = ctx.key {
-        if key == keys.move_up {
-            return current_option.up();
-        } else if key == keys.move_down {
-            return current_option.down();
-        } else if key == keys.go_back {
-            return KeyBindingOption::Back;
-        }
-    }
-    current_option
 }
 
-fn option_to_vlc(configs: &mut Config, current_option: KeyBindingOption) -> VirtualKeyCode {
-    let keys = &configs.keys;
+fn option_to_config(configs: &mut Config, current_option: KeyBindingOption) -> &mut VirtualKeyCode {
     match current_option {
-        KeyBindingOption::Right => keys.move_right,
-        KeyBindingOption::Left => keys.move_left,
-        KeyBindingOption::Up => keys.move_up,
-        KeyBindingOption::Down => keys.move_down,
-        KeyBindingOption::UpRight => keys.move_up_right,
-        KeyBindingOption::UpLeft => keys.move_up_left,
-        KeyBindingOption::DownRight => keys.move_down_right,
-        KeyBindingOption::DownLeft => keys.move_down_left,
-        KeyBindingOption::Descend => keys.descend,
-        KeyBindingOption::Inventory => keys.open_inventory,
-        KeyBindingOption::GrabItem => keys.grab_item,
-        KeyBindingOption::DropItem => keys.drop_item,
-        KeyBindingOption::RemoveItem => keys.remove_item,
-        KeyBindingOption::GoBack => keys.go_back,
-        KeyBindingOption::WaitTurn => keys.wait_turn,
-        KeyBindingOption::Select => keys.select,
-        KeyBindingOption::Back => keys.go_back,
+        KeyBindingOption::Right => &mut configs.keys.move_right,
+        KeyBindingOption::Left => &mut configs.keys.move_left,
+        KeyBindingOption::Up => &mut configs.keys.move_up,
+        KeyBindingOption::Down => &mut configs.keys.move_down,
+        KeyBindingOption::UpRight => &mut configs.keys.move_up_right,
+        KeyBindingOption::UpLeft => &mut configs.keys.move_up_left,
+        KeyBindingOption::DownRight => &mut configs.keys.move_down_right,
+        KeyBindingOption::DownLeft => &mut configs.keys.move_down_left,
+        KeyBindingOption::Descend => &mut configs.keys.descend,
+        KeyBindingOption::Inventory => &mut configs.keys.open_inventory,
+        KeyBindingOption::GrabItem => &mut configs.keys.grab_item,
+        KeyBindingOption::DropItem => &mut configs.keys.drop_item,
+        KeyBindingOption::RemoveItem => &mut configs.keys.remove_item,
+        KeyBindingOption::WaitTurn => &mut configs.keys.wait_turn,
+        KeyBindingOption::Select => &mut configs.keys.select,
+        KeyBindingOption::Back | KeyBindingOption::GoBack => &mut configs.keys.go_back,
     }
 }
 
-fn vlc_to_str(vlc: VirtualKeyCode) -> &'static str {
+const fn vlc_to_str(vlc: VirtualKeyCode) -> &'static str {
     match vlc {
         VirtualKeyCode::Key1 => "1",
         VirtualKeyCode::Key2 => "2",

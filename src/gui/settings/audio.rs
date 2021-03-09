@@ -81,7 +81,6 @@ pub fn show(
                 }
                 AudioOption::Back => (),
             }
-
         } else if key == keys.move_right {
             match current_option {
                 AudioOption::MasterVolume => {

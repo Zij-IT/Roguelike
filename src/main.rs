@@ -19,6 +19,7 @@ use specs::{
     prelude::*,
     saveload::{SimpleMarker, SimpleMarkerAllocator},
 };
+use rodio::Source;
 
 //Internal mods and includes
 mod camera;
@@ -48,8 +49,6 @@ use state::{
     Gameplay::{AwaitingInput, PreRun},
     KeyBindingOption, MainOption, Menu, SettingsOption, State, VisualOption,
 };
-use rodio::Source;
-use std::io::BufReader;
 
 //Macros
 ///Given a specs::World, and a list of components, it registers all components in the world
@@ -69,10 +68,6 @@ macro_rules! insert_all {
         }
     };
 }
-
-//Constants
-const MAP_HEIGHT: i32 = 64;
-const MAP_WIDTH: i32 = 64;
 
 //Main construct
 pub struct BashingBytes {
@@ -152,6 +147,9 @@ impl BashingBytes {
 
     ///Generates a new level using `random_builder` with the specified depth
     fn generate_world_map(&mut self, new_depth: i32) {
+        const MAP_HEIGHT: i32 = 64;
+        const MAP_WIDTH: i32 = 64;
+
         let mut builder = map_builder::random_builder(MAP_WIDTH, MAP_HEIGHT, new_depth);
         builder.build_map();
         self.world.insert(builder.get_map());
@@ -220,7 +218,7 @@ impl BashingBytes {
                             State::Menu(Menu::Visual(VisualOption::FullScreen))
                         }
                         SettingsOption::Keybindings => {
-                            State::Menu(Menu::Keybinding(KeyBindingOption::Up))
+                            State::Menu(Menu::Keybinding(KeyBindingOption::Right))
                         }
                         SettingsOption::Back => {
                             if raws::config::save(&self.configs).is_err() {
@@ -234,7 +232,14 @@ impl BashingBytes {
             }
             Menu::Audio(option) => {
                 let assets = &*self.world.fetch::<rex_assets::RexAssets>();
-                let new_opt = gui::settings::audio::show(&mut self.configs, &self.music_sink, &self.sfx_sink, ctx, option, assets);
+                let new_opt = gui::settings::audio::show(
+                    &mut self.configs,
+                    &self.music_sink,
+                    &self.sfx_sink,
+                    ctx,
+                    option,
+                    assets,
+                );
                 if new_opt == AudioOption::Back {
                     State::Menu(Menu::Settings(SettingsOption::Audio))
                 } else {
@@ -252,12 +257,21 @@ impl BashingBytes {
             }
             Menu::Keybinding(option) => {
                 let assets = &*self.world.fetch::<rex_assets::RexAssets>();
-                let new_opt =
-                    gui::settings::keybindings::show(&mut self.configs, ctx, option, assets);
-                if new_opt == KeyBindingOption::Back {
-                    State::Menu(Menu::Settings(SettingsOption::Keybindings))
+                match gui::settings::keybindings::show(&mut self.configs, ctx, option, assets) {
+                    (KeyBindingOption::Back, _) => {
+                        State::Menu(Menu::Settings(SettingsOption::Keybindings))
+                    }
+                    (new_opt, false) => State::Menu(Menu::Keybinding(new_opt)),
+                    (new_opt, true) => State::Menu(Menu::KeySelect(new_opt)),
+                }
+            }
+            Menu::KeySelect(option) => {
+                let assets = &*self.world.fetch::<rex_assets::RexAssets>();
+                if gui::settings::keybindings::key_selected(&mut self.configs, ctx, option, assets)
+                {
+                    State::Menu(Menu::Keybinding(option))
                 } else {
-                    State::Menu(Menu::Keybinding(new_opt))
+                    State::Menu(Menu::KeySelect(option))
                 }
             }
         }
@@ -382,10 +396,17 @@ impl GameState for BashingBytes {
     }
 }
 
-//This macro uses include_bytes, which is means that the path is relative to the file that it is called in
-
 fn main() -> BError {
+    //Constants
+    const TITLE: &str = "Bashing Bytes";
+    const FONT_PATH: &str = "fonts/cp437_8x8.png";
+    const WIDTH: usize = 80;
+    const HEIGHT: usize = 60;
+    const TILE_SIZE: usize = 8;
+
     //Load fonts
+    //This macro uses include_bytes, which is means that the path is relative to the file that it is called in.
+    //Because of this, I can't use the above FONT_PATH
     rltk::embedded_resource!(GAME_FONT, "../resources/fonts/cp437_8x8.png");
     rltk::link_resource!(GAME_FONT, "../resources/fonts/cp437_8x8.png");
 
@@ -401,17 +422,17 @@ fn main() -> BError {
 
     //Create RltkBuilder
     let context = RltkBuilder::new()
-        .with_title("Bashing Bytes")
-        .with_font("fonts/cp437_8x8.png", 8, 8)
+        .with_title(TITLE)
+        .with_font(FONT_PATH, TILE_SIZE, TILE_SIZE)
         .with_fullscreen(configs.visual.full_screen)
-        .with_dimensions(80, 60)
-        .with_simple_console(80, 60, "fonts/cp437_8x8.png") // map
-        .with_simple_console_no_bg(80, 60, "fonts/cp437_8x8.png") // creatures
-        .with_sparse_console(80, 60, "fonts/cp437_8x8.png") // hud
+        .with_dimensions(WIDTH, HEIGHT)
+        .with_simple_console(WIDTH, HEIGHT, FONT_PATH) // map
+        .with_simple_console_no_bg(WIDTH, HEIGHT, FONT_PATH) // creatures
+        .with_sparse_console(WIDTH, HEIGHT, FONT_PATH) // hud
         .build()?;
 
     //Volume
-    let master_volume : f32 = configs.audio.master_volume as f32 / 25.0;
+    let master_volume: f32 = configs.audio.master_volume as f32 / 25.0;
     let music_volume: f32 = configs.audio.music_volume as f32 / 25.0;
     let sfx_volume: f32 = configs.audio.sfx_volume as f32 / 25.0;
 
@@ -419,8 +440,10 @@ fn main() -> BError {
     let (_music_stream, music_handle) = rodio::OutputStream::try_default().unwrap();
     let music_sink = rodio::Sink::try_new(&music_handle).unwrap();
 
-    let file = std::fs::File::open("./resources/audio/main_theme.ogg").unwrap();
-    let source = rodio::Decoder::new(BufReader::new(file)).unwrap().repeat_infinite();
+    let file = std::fs::File::open("./resources/audio/dungeon_sewer.ogg").unwrap();
+    let source = rodio::Decoder::new(std::io::BufReader::new(file))
+        .unwrap()
+        .repeat_infinite();
 
     music_sink.set_volume(master_volume * music_volume);
     music_sink.append(source);

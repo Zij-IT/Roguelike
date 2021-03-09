@@ -10,10 +10,29 @@ use serde::Deserialize;
 use serde::Serialize;
 use strum::AsRefStr;
 
+macro_rules! xp_from_path {
+    ($filename : expr) => {{
+        let byte_vec = include_bytes!($filename)
+            .into_iter()
+            .map(|x| *x)
+            .collect::<Vec<u8>>();
+
+        //Being passed to XpFile::read is a:
+        //Mutable reference to an immutable reference to a slice of bytes
+        rltk::XpFile::read(&mut &*byte_vec).expect("Unable to read resource as XpFile")
+    }};
+}
+
 #[derive(Serialize, Deserialize, Clone, EnumCycle, AsRefStr)]
 pub enum Font {
     Default,
     Others,
+}
+
+impl Default for Font {
+    fn default() -> Self {
+        Self::Default
+    }
 }
 
 pub fn show(
@@ -58,6 +77,8 @@ pub fn show(
 
     let on_color = RGB::named((108, 217, 0));
     let off_color = RGB::named((217, 0, 54));
+
+    draw_scene(configs, ctx);
 
     let visual = &mut configs.visual;
 
@@ -124,4 +145,41 @@ pub fn show(
     }
 
     current_option
+}
+
+fn draw_scene(configs: &Config, ctx: &mut Rltk) {
+    const OFFSET_X: usize = 27;
+    const OFFSET_Y: usize = 38;
+
+    lazy_static::lazy_static! {
+        static ref SCENE : rltk::XpFile = xp_from_path!("../../../resources/visual_scene.xp");
+    }
+
+    let colors = &configs.visual.color_mapping; //.colors
+
+    for layer in &SCENE.layers {
+        for y in 0..layer.height {
+            for x in 0..layer.width {
+                let cell = layer.get(x, y).unwrap();
+                let color = match cell.ch {
+                    64 => colors.player,
+                    34 => colors.grass,
+                    176 => colors::COBBLESTONE,
+                    249 => colors::FLOOR,
+                    247 => match (cell.fg.r, cell.fg.g) {
+                        (0, 70) => colors.water,
+                        (0, 0) => colors.deep_water,
+                        (140, 0) => colors.lava,
+                        (_, _) => unreachable!(),
+                    },
+                    1 => colors::TOWN_NPC,
+                    35 | 186 | 205 => colors::WOOD_WALL,
+                    47 | 41 | 9 => colors.collectable,
+                    103 => colors.enemy,
+                    _ => unreachable!(),
+                };
+                ctx.set(x + OFFSET_X, y + OFFSET_Y, RGB::named(color), RGB::named(colors::BACKGROUND), cell.ch);
+            }
+        }
+    }
 }

@@ -1,15 +1,28 @@
-mod config;
 mod config_structs;
+use config_structs::{AudioConfigs, KeyBinds, VisualConfigs};
 
-pub use config::Config;
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+pub struct Config {
+    pub keys: KeyBinds,
+    pub visual: VisualConfigs,
+    pub audio: AudioConfigs,
+}
+
+impl Config {
+    pub fn load_config(&mut self, desired_config: Self) {
+        *self = desired_config;
+    }
+}
 
 pub fn load() -> Result<Config, Config> {
     let config = include_bytes!("../../../prefabs/config.ron");
 
-    return match ron::de::from_bytes(config) {
+    match ron::de::from_bytes(config) {
         Ok(config) => Ok(config),
-        Err(_) => Err(Config::new()),
-    };
+        Err(_) => Err(Config::default()),
+    }
 }
 
 pub fn save(current_configs: &Config) -> ron::Result<()> {

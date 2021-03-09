@@ -28,6 +28,7 @@ pub enum Menu {
     Audio(AudioOption),
     Visual(VisualOption),
     Keybinding(KeyBindingOption),
+    KeySelect(KeyBindingOption),
 }
 
 //Menu Options

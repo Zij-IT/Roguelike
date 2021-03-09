@@ -5,6 +5,9 @@ pub mod colors {
     pub const STAIRS: (u8, u8, u8) = (0, 0, 255);
     pub const WALL_REVEALED: (u8, u8, u8) = (77, 77, 77);
     pub const WALL_VISIBLE: (u8, u8, u8) = (0, 179, 0);
+    pub const COBBLESTONE: (u8, u8, u8) = (77, 77, 77);
+    pub const TOWN_NPC: (u8, u8, u8) = (102, 102, 0);
+    pub const WOOD_WALL: (u8, u8, u8) = (77, 61, 38);
 }
 
 pub mod consoles {

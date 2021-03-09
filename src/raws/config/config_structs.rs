@@ -383,8 +383,8 @@ pub struct KeyBinds {
     #[serde(with = "VirtualKeyCodeDef")]
     pub select: VirtualKeyCode,
 }
-impl KeyBinds {
-    pub const fn new() -> Self {
+impl Default for KeyBinds {
+    fn default() -> Self {
         Self {
             //Movement
             move_up: VirtualKeyCode::K,
@@ -411,21 +411,36 @@ impl KeyBinds {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct VisualConfigs {
     pub full_screen: bool,
     pub screen_shake: bool,
     pub dynamic_color: bool,
     pub active_font: visual::Font,
+    pub color_mapping: ColorMapping,
 }
 
-impl VisualConfigs {
-    pub const fn new() -> Self {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ColorMapping {
+    pub player: (u8, u8, u8),
+    pub enemy: (u8, u8, u8),
+    pub collectable: (u8, u8, u8),
+    pub grass: (u8, u8, u8),
+    pub water: (u8, u8, u8),
+    pub deep_water: (u8, u8, u8),
+    pub lava: (u8, u8, u8),
+}
+
+impl Default for ColorMapping {
+    fn default() -> Self {
         Self {
-            full_screen: false,
-            screen_shake: false,
-            dynamic_color: false,
-            active_font: visual::Font::Default,
+            player: (178, 178, 0),
+            enemy: (140, 0, 35),
+            collectable: (0, 140, 140),
+            grass: (70, 140, 0),
+            water: (0, 70, 140),
+            deep_water: (0, 0, 140),
+            lava: (140, 0, 35),
         }
     }
 }
@@ -437,8 +452,8 @@ pub struct AudioConfigs {
     pub sfx_volume: usize,
 }
 
-impl AudioConfigs {
-    pub const fn new() -> Self {
+impl Default for AudioConfigs {
+    fn default() -> Self {
         Self {
             master_volume: 0,
             music_volume: 0,

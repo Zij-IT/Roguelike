@@ -11,8 +11,9 @@ macro_rules! xp_from_path {
             .map(|x| *x)
             .collect::<Vec<u8>>();
 
-        //&*byte_vec -> a reference to a slice of u8. &mut -> Mutable reference to the slice reference
-        XpFile::read(&mut &*byte_vec).expect("Unable to load resource")
+        //Being passed to XpFile::read is a:
+        //Mutable reference to an immutable reference to a slice of bytes
+        rltk::XpFile::read(&mut &*byte_vec).expect("Unable to read resource as XpFile")
     }};
 }
 

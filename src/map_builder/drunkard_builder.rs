@@ -41,20 +41,6 @@ impl DrunkardsBuilder {
 }
 
 impl MapBuilder for DrunkardsBuilder {
-    fn get_map(&self) -> Map {
-        self.map.clone()
-    }
-
-    fn get_starting_position(&self) -> Position {
-        self.starting_position.clone()
-    }
-
-    fn spawn_entities(&mut self, ecs: &mut World) {
-        for area in &self.noise_areas {
-            spawn_region(ecs, area.1, self.map.depth);
-        }
-    }
-
     fn build_map(&mut self) {
         assert!(i32::checked_mul(self.map.width, self.map.height) != None);
         let mut rng = RandomNumberGenerator::new();
@@ -132,5 +118,19 @@ impl MapBuilder for DrunkardsBuilder {
 
         cull_and_set_exit(&mut self.map, start_idx);
         self.noise_areas = gen_voronoi_regions(&self.map, &mut rng);
+    }
+
+    fn spawn_entities(&mut self, ecs: &mut World) {
+        for area in &self.noise_areas {
+            spawn_region(ecs, area.1, self.map.depth);
+        }
+    }
+
+    fn get_map(&self) -> Map {
+        self.map.clone()
+    }
+
+    fn get_starting_position(&self) -> Position {
+        self.starting_position.clone()
     }
 }
