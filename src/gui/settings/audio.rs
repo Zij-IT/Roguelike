@@ -16,7 +16,7 @@ pub fn show(
     assets: &RexAssets,
 ) -> AudioOption {
     ctx.set_active_console(consoles::HUD_CONSOLE);
-    ctx.render_xp_sprite(&assets.blank_audio, 0, 0);
+    ctx.render_xp_sprite(&assets.audio, 0, 0);
 
     let yellow = RGB::named(rltk::YELLOW);
     let bg = RGB::from(colors::BACKGROUND);

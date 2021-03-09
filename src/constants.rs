@@ -1,3 +1,7 @@
+// todo: Should this file even exist?
+//  Colors can be moved to gui, and camera.rs as well
+//  Consoles could be moved to main...
+
 pub mod colors {
     pub const BACKGROUND: (u8, u8, u8) = (17, 0, 22);
     pub const FLOOR: (u8, u8, u8) = (26, 26, 26);

@@ -1,7 +1,7 @@
 mod config_structs;
 use config_structs::{AudioConfigs, KeyBinds, VisualConfigs};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct Config {

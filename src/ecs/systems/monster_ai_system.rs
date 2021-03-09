@@ -30,7 +30,7 @@ impl<'a> System<'a> for MonsterAI {
             monsters,
             map,
             mut positions,
-            mut viewsheds,
+            mut fields_of_view,
             mut attacks,
         ) = data;
 
@@ -38,11 +38,11 @@ impl<'a> System<'a> for MonsterAI {
             return;
         }
 
-        for (mut vs, mut pos, ent, _) in
-            (&mut viewsheds, &mut positions, &entities, &monsters).join()
+        for (mut fov, mut pos, ent, _) in
+            (&mut fields_of_view, &mut positions, &entities, &monsters).join()
         {
             //If monster can see player attack if within range or approach
-            if vs.visible_tiles.contains(&*player_pos) {
+            if fov.visible_tiles.contains(&*player_pos) {
                 let distance =
                     rltk::DistanceAlg::Pythagoras.distance2d(Point::new(pos.x, pos.y), *player_pos);
                 if distance < 2.0 {
@@ -65,7 +65,7 @@ impl<'a> System<'a> for MonsterAI {
                         //Do note, that this does NOT check if the player is there
                         pos.x = path.steps[1] as i32 % map.width;
                         pos.y = path.steps[1] as i32 / map.width;
-                        vs.is_dirty = true;
+                        fov.is_dirty = true;
                     }
                 }
             }

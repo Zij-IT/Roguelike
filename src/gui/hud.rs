@@ -9,7 +9,7 @@ use specs::{Entity, World, WorldExt};
 pub fn show(world: &World, ctx: &mut Rltk) {
     let assets = world.fetch::<rex_assets::RexAssets>();
     ctx.set_active_console(consoles::HUD_CONSOLE);
-    ctx.render_xp_sprite(&assets.blank_ui, 0, 0);
+    ctx.render_xp_sprite(&assets.ui, 0, 0);
 
     //Show player health
     let player_entity = world.fetch::<Entity>();

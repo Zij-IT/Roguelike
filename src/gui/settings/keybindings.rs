@@ -16,7 +16,7 @@ pub fn show(
     assets: &RexAssets,
 ) -> (KeyBindingOption, bool) {
     ctx.set_active_console(consoles::HUD_CONSOLE);
-    ctx.render_xp_sprite(&assets.blank_keybindings, 0, 0);
+    ctx.render_xp_sprite(&assets.keybindings, 0, 0);
 
     draw_all_keys(configs, ctx, current_option);
 
@@ -46,7 +46,7 @@ pub fn key_selected(
         static ref BAD_KEY_CHOSEN: AtomicBool = AtomicBool::new(false);
     }
 
-    ctx.render_xp_sprite(&assets.blank_keybindings, 0, 0);
+    ctx.render_xp_sprite(&assets.keybindings, 0, 0);
 
     let (half_width, half_height) = {
         let (w, h) = ctx.get_char_size();

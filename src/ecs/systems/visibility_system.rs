@@ -17,20 +17,20 @@ impl<'a> System<'a> for VisibilitySystem {
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (entities, player_entity, positions, mut map, mut viewsheds) = data;
+        let (entities, player_entity, positions, mut map, mut fields_of_view) = data;
 
-        for (ent, view, pos) in (&entities, &mut viewsheds, &positions).join() {
-            if view.is_dirty {
-                view.is_dirty = false;
-                view.visible_tiles.clear();
-                view.visible_tiles = field_of_view(Point::new(pos.x, pos.y), view.range, &*map);
-                view.visible_tiles
+        for (ent, fov, pos) in (&entities, &mut fields_of_view, &positions).join() {
+            if fov.is_dirty {
+                fov.is_dirty = false;
+                fov.visible_tiles.clear();
+                fov.visible_tiles = field_of_view(Point::new(pos.x, pos.y), fov.range, &*map);
+                fov.visible_tiles
                     .retain(|t| t.x >= 0 && t.x < map.width && t.y >= 0 && t.y < map.height);
                 if ent == *player_entity {
                     for idx in 0..map.tile_status.len() {
                         map.remove_tile_status(idx, TileStatus::Visible);
                     }
-                    for vis in &view.visible_tiles {
+                    for vis in &fov.visible_tiles {
                         let idx = map.xy_idx(vis.x, vis.y);
                         map.set_tile_status(idx, TileStatus::Revealed);
                         map.set_tile_status(idx, TileStatus::Visible);

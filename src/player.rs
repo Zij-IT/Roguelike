@@ -46,7 +46,7 @@ pub fn respond_to_input(game: &mut BashingBytes, ctx: &mut Rltk) -> Gameplay {
         } else if key == keys.wait_turn {
             return skip_turn(&mut game.world);
         } else if key == VirtualKeyCode::M {
-            //Cheat key :D
+
         } else {
             return Gameplay::AwaitingInput;
         }
@@ -59,7 +59,7 @@ pub fn respond_to_input(game: &mut BashingBytes, ctx: &mut Rltk) -> Gameplay {
 
 fn try_move(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let mut positions = ecs.write_storage::<Position>();
-    let mut viewsheds = ecs.write_storage::<FieldOfView>();
+    let mut fields_of_view = ecs.write_storage::<FieldOfView>();
     let mut players = ecs.write_storage::<Player>();
     let mut attacks = ecs.write_storage::<WantsToMelee>();
     let entities = ecs.entities();
@@ -68,8 +68,8 @@ fn try_move(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let map = &ecs.fetch::<Map>();
 
     //Allows the player to attack if position is occupied
-    for (entity, _, pos, viewshed) in
-        (&entities, &mut players, &mut positions, &mut viewsheds).join()
+    for (entity, _, pos, fov) in
+        (&entities, &mut players, &mut positions, &mut fields_of_view).join()
     {
         //Check bounds
         if pos.x + delta_x < 1
@@ -103,7 +103,7 @@ fn try_move(delta_x: i32, delta_y: i32, ecs: &mut World) {
             let mut player_pos = ecs.write_resource::<Point>();
             player_pos.x = pos.x;
             player_pos.y = pos.y;
-            viewshed.is_dirty = true;
+            fov.is_dirty = true;
         }
     }
 }
@@ -154,9 +154,9 @@ fn try_descend(ecs: &mut World) -> Gameplay {
 }
 
 fn skip_turn(ecs: &mut World) -> Gameplay {
-    let viewshed_comps = ecs.read_storage::<FieldOfView>();
+    let fields_of_view = ecs.read_storage::<FieldOfView>();
     let player_ent = ecs.fetch::<Entity>();
-    let player_vs = viewshed_comps.get(*player_ent).unwrap();
+    let player_vs = fields_of_view.get(*player_ent).unwrap();
     let mobs = ecs.read_storage::<Monster>();
     let map = ecs.fetch::<Map>();
 
@@ -168,7 +168,7 @@ fn skip_turn(ecs: &mut World) -> Gameplay {
             .any(|ent| mobs.get(*ent).is_some())
     };
 
-    //If the players viewshed does not contain mobs they may heal a point by waiting
+    //If the players fov does not contain mobs they may heal a point by waiting
     if !player_vs
         .visible_tiles
         .iter()

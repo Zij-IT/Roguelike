@@ -8,7 +8,7 @@ The library I am using for the heavy-lifting is the [bracket library](https://gi
 
 # State of Game
 
-Game is back to being in a playable, non-testing state. It may not be the most interesting of games, but it's mine. Currently there is a couple monsters that are in the game. They all have the same AI, and besides from the stats being unique, they are all the same.
+Game is back to being in a playable, non-testing state. It may not be the most interesting of games, but it's mine. Currently, there is a couple monsters that are in the game. They all have the same AI, and besides from the stats being unique, they are all the same.
 
 # Feedback
 If you see something in my code that looks messy and should be improved, please do let me know by submitting a PR!

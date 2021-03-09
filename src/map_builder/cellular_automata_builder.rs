@@ -88,7 +88,7 @@ impl MapBuilder for CellularAutomataBuilder {
 
         cull_and_set_exit(&mut self.map, start_idx);
 
-        //Build noise map for use in spawn entiites
+        //Build noise map for use in spawn entities
         self.noise_areas = gen_voronoi_regions(&self.map, &mut rng);
     }
 

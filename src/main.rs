@@ -15,13 +15,10 @@
 
 //External includes
 use rltk::prelude::*;
-use specs::{
-    prelude::*,
-    saveload::{SimpleMarker, SimpleMarkerAllocator},
-};
-use rodio::Source;
+use specs::prelude::*;
 
 //Internal mods and includes
+mod audio;
 mod camera;
 mod constants;
 mod ecs;
@@ -33,6 +30,7 @@ mod raws;
 mod rex_assets;
 mod save_load_util;
 mod spawning;
+mod specs_helpers;
 mod state;
 
 use constants::consoles;
@@ -51,34 +49,17 @@ use state::{
 };
 
 //Macros
-///Given a specs::World, and a list of components, it registers all components in the world
-macro_rules! register_all {
-    ($ecs:expr, $($component:ty),* $(,)*) => {
-        {
-            $($ecs.register::<$component>();)*
-        }
-    };
-}
-
-///Given a specs::World, and a list of resources, it inserts all resources in the world
-macro_rules! insert_all {
-    ($ecs:expr, $($resource:expr),* $(,)*) => {
-        {
-            $($ecs.insert($resource);)*
-        }
-    };
-}
 
 //Main construct
 pub struct BashingBytes {
     pub world: World,
     pub configs: raws::config::Config,
-    pub music_sink: rodio::Sink,
-    pub sfx_sink: rodio::Sink,
+    pub music_sink: Option<rodio::Sink>,
+    pub sfx_sink: Option<rodio::Sink>,
 }
 
 impl BashingBytes {
-    ///Gathers all entities that are not related to the player
+    /// Gathers all entities that are not related to the player
     fn entities_to_remove_on_level_change(&mut self) -> Vec<Entity> {
         let entities = self.world.entities();
         let player_ent = self.world.fetch::<Entity>();
@@ -100,7 +81,7 @@ impl BashingBytes {
         to_delete
     }
 
-    ///Generates next level for the player to explore
+    /// Generates next level for the player to explore
     fn goto_next_level(&mut self) {
         let to_delete = self.entities_to_remove_on_level_change();
         for target in to_delete {
@@ -125,23 +106,23 @@ impl BashingBytes {
         }
     }
 
-    ///Deletes all entities, and sets up for next game
+    /// Deletes all entities, and sets up for next game
     fn game_over_cleanup(&mut self) {
         self.world.delete_all();
         self.world.maintain();
 
-        //Add starting message
-        let mut logs = self.world.write_resource::<GameLog>();
-        logs.clear();
-        logs.push(&"Welcome to my Roguelike!");
-        std::mem::drop(logs);
+        {
+            let mut logs = self.world.write_resource::<GameLog>();
+            logs.clear();
+            logs.push(&"Welcome to my Roguelike!");
+        }
 
-        //Create new player resource
+        // Create new player resource
         let player_ent = spawning::spawn_player(&mut self.world, 0, 0);
         self.world.insert(player_ent);
         self.world.insert(Point::new(0, 0));
 
-        //Build a new map and place player
+        // Build a new map and place player
         self.generate_world_map(1);
     }
 
@@ -155,8 +136,8 @@ impl BashingBytes {
         self.world.insert(builder.get_map());
         builder.spawn_entities(&mut self.world);
 
-        //Updates the players position based on the new map generated
-        //Also must update the player component, and the player pos resource
+        // Updates the players position based on the new map generated
+        // Also must update the player component, and the player pos resource
         let Position {
             x: player_x,
             y: player_y,
@@ -222,8 +203,7 @@ impl BashingBytes {
                         }
                         SettingsOption::Back => {
                             if raws::config::save(&self.configs).is_err() {
-                                //todo!()
-                                //Inform player of error in saving configs
+                                //todo: Inform player of error in saving configs
                             }
                             State::Menu(Menu::Main(MainOption::Settings))
                         }
@@ -232,10 +212,12 @@ impl BashingBytes {
             }
             Menu::Audio(option) => {
                 let assets = &*self.world.fetch::<rex_assets::RexAssets>();
+                //todo: Either audio::show needs to account for no audio,
+                // or it needs to be dealt with here
                 let new_opt = gui::settings::audio::show(
                     &mut self.configs,
-                    &self.music_sink,
-                    &self.sfx_sink,
+                    self.music_sink.as_ref().unwrap(),
+                    self.sfx_sink.as_ref().unwrap(),
                     ctx,
                     option,
                     assets,
@@ -397,126 +379,60 @@ impl GameState for BashingBytes {
 }
 
 fn main() -> BError {
-    //Constants
     const TITLE: &str = "Bashing Bytes";
     const FONT_PATH: &str = "fonts/cp437_8x8.png";
     const WIDTH: usize = 80;
     const HEIGHT: usize = 60;
     const TILE_SIZE: usize = 8;
 
-    //Load fonts
-    //This macro uses include_bytes, which is means that the path is relative to the file that it is called in.
-    //Because of this, I can't use the above FONT_PATH
-    rltk::embedded_resource!(GAME_FONT, "../resources/fonts/cp437_8x8.png");
-    rltk::link_resource!(GAME_FONT, "../resources/fonts/cp437_8x8.png");
+    // todo: Inform player about error loading configs
+    let configs = raws::config::load().map_or_else(|err| err, |ok| ok);
 
-    //Load Configurations for the game
-    let configs = match raws::config::load() {
-        Ok(config) => config,
-        Err(config) => {
-            //todo!()
-            //Inform player of error in reading config file, and that defaults are being used
-            config
-        }
+    // todo: This should not be keeping a global state, but passing the raw spawns
+    //  to be used as either a resource, or a part of BashingBytes struct
+    raws::spawn::load();
+
+    // This CANNOT be moved to an external function, because these functions spawn a thread in main,
+    // which is required because if the thread dies, so does the audio stream
+    // todo: Inform player about error accessing audio if such an error occurs
+    let music_audio = rodio::OutputStream::try_default().ok();
+    let sfx_audio = rodio::OutputStream::try_default().ok();
+
+    let music_sink = music_audio
+        .as_ref()
+        .and_then(|(_stream, handle)| audio::configure_music(&configs, handle).ok());
+    let sfx_sink = sfx_audio
+        .as_ref()
+        .and_then(|(_stream, handle)| audio::configure_sfx(&configs, handle).ok());
+
+    //Set up ECS
+    let world = {
+        let mut world = specs::World::new();
+        specs_helpers::register_all_components(&mut world);
+        specs_helpers::insert_all_resources(&mut world);
+        world
     };
 
-    //Create RltkBuilder
+    let bashing_bytes = {
+        let mut temp = BashingBytes {
+            world,
+            configs,
+            music_sink,
+            sfx_sink,
+        };
+        temp.generate_world_map(1);
+        temp
+    };
+
     let context = RltkBuilder::new()
         .with_title(TITLE)
         .with_font(FONT_PATH, TILE_SIZE, TILE_SIZE)
-        .with_fullscreen(configs.visual.full_screen)
+        .with_fullscreen(bashing_bytes.configs.visual.full_screen)
         .with_dimensions(WIDTH, HEIGHT)
         .with_simple_console(WIDTH, HEIGHT, FONT_PATH) // map
         .with_simple_console_no_bg(WIDTH, HEIGHT, FONT_PATH) // creatures
         .with_sparse_console(WIDTH, HEIGHT, FONT_PATH) // hud
         .build()?;
 
-    //Volume
-    let master_volume: f32 = configs.audio.master_volume as f32 / 25.0;
-    let music_volume: f32 = configs.audio.music_volume as f32 / 25.0;
-    let sfx_volume: f32 = configs.audio.sfx_volume as f32 / 25.0;
-
-    //Set up music sink
-    let (_music_stream, music_handle) = rodio::OutputStream::try_default().unwrap();
-    let music_sink = rodio::Sink::try_new(&music_handle).unwrap();
-
-    let file = std::fs::File::open("./resources/audio/dungeon_sewer.ogg").unwrap();
-    let source = rodio::Decoder::new(std::io::BufReader::new(file))
-        .unwrap()
-        .repeat_infinite();
-
-    music_sink.set_volume(master_volume * music_volume);
-    music_sink.append(source);
-
-    //Set up sfx sink
-    let (_sfx_stream, sfx_handle) = rodio::OutputStream::try_default().unwrap();
-    let sfx_sink = rodio::Sink::try_new(&sfx_handle).unwrap();
-    sfx_sink.set_volume(master_volume * sfx_volume);
-
-    //Build world
-    let mut bashing_bytes = BashingBytes {
-        world: World::new(),
-        configs,
-        music_sink,
-        sfx_sink,
-    };
-
-    //Register the components
-    //specs::World must be first, otherwise irrelevant
-    register_all!(
-        bashing_bytes.world,
-        AreaOfEffect,
-        BlocksTile,
-        CombatStats,
-        Consumable,
-        DefenseBonus,
-        Equipment,
-        Equipped,
-        InBackpack,
-        InflictsDamage,
-        Item,
-        MeleeDamageBonus,
-        Monster,
-        Name,
-        ParticleLifetime,
-        Player,
-        Position,
-        ProvidesHealing,
-        Range,
-        Render,
-        SerializationHelper,
-        SimpleMarker<SerializeMe>,
-        SufferDamage,
-        FieldOfView,
-        WantsToDropItem,
-        WantsToMelee,
-        WantsToPickupItem,
-        WantsToRemoveItem,
-        WantsToUseItem,
-    );
-
-    //Load all that data driven design goodness
-    raws::spawn::load();
-
-    //DEPENDENCIES:
-    //player -> SimpleMarkerAllocator
-    insert_all!(
-        bashing_bytes.world,
-        State::Menu(Menu::Main(MainOption::NewGame)),
-        SimpleMarkerAllocator::<SerializeMe>::new(),
-        rex_assets::RexAssets::new(),
-        ecs::ParticleBuilder::new(),
-        GameLog::new(),
-    );
-
-    //Unable to include this statement in the above batch due to the borrow checker
-    //Reason: Both world::insert and spawn_player both borrow world.world mutably
-    let player_ent = spawning::spawn_player(&mut bashing_bytes.world, 0, 0);
-    insert_all!(bashing_bytes.world, player_ent);
-
-    //Generate map
-    bashing_bytes.generate_world_map(1);
-
-    //Start game
     main_loop(context, bashing_bytes)
 }

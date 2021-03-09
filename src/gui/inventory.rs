@@ -52,7 +52,7 @@ pub fn show(configs: &Config, world: &mut World, ctx: &mut Rltk) -> InvResult {
 
     ctx.set_active_console(consoles::HUD_CONSOLE);
     let assets = world.fetch::<rex_assets::RexAssets>();
-    ctx.render_xp_sprite(&assets.blank_inv, 0, 0);
+    ctx.render_xp_sprite(&assets.inventory, 0, 0);
 
     //Base locations
     let base_x = 3;

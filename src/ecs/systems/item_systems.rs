@@ -172,7 +172,7 @@ impl<'a> System<'a> for ItemUseSystem {
             damaging_items,
             names,
             healing_items,
-            equipables,
+            equipment,
             mut logs,
             mut equipped_items,
             mut backpack,
@@ -242,7 +242,7 @@ impl<'a> System<'a> for ItemUseSystem {
             }
 
             //If the item can be equipped...
-            if let Some(equipment) = equipables.get(intent.item) {
+            if let Some(equipment) = equipment.get(intent.item) {
                 //De-equip all items that share a slot
                 let mut to_unequip = Vec::new();
                 for (item, already_equipped, name) in (&entities, &equipped_items, &names).join() {

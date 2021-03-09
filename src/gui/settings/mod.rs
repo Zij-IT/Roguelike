@@ -19,7 +19,7 @@ pub fn show_settings_menu(
     assets: &rex_assets::RexAssets,
 ) -> (SettingsOption, bool) {
     ctx.set_active_console(consoles::HUD_CONSOLE);
-    ctx.render_xp_sprite(&assets.blank_settings, 0, 0);
+    ctx.render_xp_sprite(&assets.settings, 0, 0);
 
     let yellow = RGB::named(rltk::YELLOW);
     let base_y = 2;

@@ -34,7 +34,7 @@
     ),
     audio: (
         master_volume: 0,
-        music_volume: 0,
-        sfx_volume: 0,
+        music_volume: 25,
+        sfx_volume: 20,
     ),
 )

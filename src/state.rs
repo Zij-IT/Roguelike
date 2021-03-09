@@ -32,6 +32,8 @@ pub enum Menu {
 }
 
 //Menu Options
+//todo: remove `Back` from every single Option
+
 #[derive(PartialEq, Copy, Clone, Debug, EnumIter, AsRefStr, EnumCycle)]
 pub enum MainOption {
     #[strum(serialize = "Start Anew")]

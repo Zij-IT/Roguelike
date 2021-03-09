@@ -6,22 +6,8 @@ use crate::{
 };
 use enum_cycling::{EnumCycle, IntoEnumCycle};
 use rltk::{Rltk, RGB};
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use strum::AsRefStr;
-
-macro_rules! xp_from_path {
-    ($filename : expr) => {{
-        let byte_vec = include_bytes!($filename)
-            .into_iter()
-            .map(|x| *x)
-            .collect::<Vec<u8>>();
-
-        //Being passed to XpFile::read is a:
-        //Mutable reference to an immutable reference to a slice of bytes
-        rltk::XpFile::read(&mut &*byte_vec).expect("Unable to read resource as XpFile")
-    }};
-}
 
 #[derive(Serialize, Deserialize, Clone, EnumCycle, AsRefStr)]
 pub enum Font {
@@ -42,7 +28,7 @@ pub fn show(
     assets: &RexAssets,
 ) -> VisualOption {
     ctx.set_active_console(consoles::HUD_CONSOLE);
-    ctx.render_xp_sprite(&assets.blank_visual, 0, 0);
+    ctx.render_xp_sprite(&assets.visual, 0, 0);
 
     //Set defaults
     let yellow = RGB::named(rltk::YELLOW);
@@ -78,7 +64,7 @@ pub fn show(
     let on_color = RGB::named((108, 217, 0));
     let off_color = RGB::named((217, 0, 54));
 
-    draw_scene(configs, ctx);
+    draw_scene(configs, ctx, assets);
 
     let visual = &mut configs.visual;
 
@@ -147,17 +133,15 @@ pub fn show(
     current_option
 }
 
-fn draw_scene(configs: &Config, ctx: &mut Rltk) {
+fn draw_scene(configs: &Config, ctx: &mut Rltk, assets: &RexAssets) {
     const OFFSET_X: usize = 27;
     const OFFSET_Y: usize = 38;
 
-    lazy_static::lazy_static! {
-        static ref SCENE : rltk::XpFile = xp_from_path!("../../../resources/visual_scene.xp");
-    }
+    let scene = &assets.color_mapping;
 
     let colors = &configs.visual.color_mapping; //.colors
 
-    for layer in &SCENE.layers {
+    for layer in &scene.layers {
         for y in 0..layer.height {
             for x in 0..layer.width {
                 let cell = layer.get(x, y).unwrap();
@@ -178,7 +162,13 @@ fn draw_scene(configs: &Config, ctx: &mut Rltk) {
                     103 => colors.enemy,
                     _ => unreachable!(),
                 };
-                ctx.set(x + OFFSET_X, y + OFFSET_Y, RGB::named(color), RGB::named(colors::BACKGROUND), cell.ch);
+                ctx.set(
+                    x + OFFSET_X,
+                    y + OFFSET_Y,
+                    RGB::named(color),
+                    RGB::named(colors::BACKGROUND),
+                    cell.ch,
+                );
             }
         }
     }
