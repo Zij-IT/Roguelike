@@ -1,14 +1,28 @@
-## Bashing Bytes
+# Bashing Bytes
 
-So this is mainly to just work on my ability to have a long term project, and to just have fun with Rust. The main goal of this project is to make an accessible roguelike that anyone could play. I would like the game to support just using the mouse, or just the keyboard. For now the aesthetics aren't the primary goal, although I would like it to look nice. This does mean that before I make the game something different (whatever that means), that I would like to make sure its fun to just explore the menus. 
+## Introduction
 
-The game does not currently support a tile setup. I plan on changing this at some point in the future, because if the data from AMOD/Cogmind can be reasonably applied to any roguelike, 80% of players will use the tileset, and not the ascii graphics.
+This is a simple Roguelike, that is about as unbalanced and simple as it gets. This project served as a way for me to learn how to use the bracket library, as well as how to structure a long term project.
 
-The library I am using for the heavy-lifting is the [bracket library](https://github.com/thebracket/bracket-lib). The github page also has a link to the tutorial, which this project is based on. I plan on following it in order to build up my algorithm repertoire, and help where my creativity is lacking.
+I am satisified with how the project is at this point, even though it could use some cleaning up, and half the settings page doesn't work.
 
-# State of Game
+The project taught me a lot about the different libraries in Rust, like Serde, BracketLib, and others, as they can be found in my Toml file. Additionally, it led to my first published library EnumCycle, as I got tired of writing Boilerplate code for the different menus.
 
-Game is back to being in a playable, non-testing state. It may not be the most interesting of games, but it's mine. Currently, there is a couple monsters that are in the game. They all have the same AI, and besides from the stats being unique, they are all the same.
+## Gameplay
 
-# Feedback
-If you see something in my code that looks messy and should be improved, please do let me know by submitting a PR!
+Bashing Bytes has 3 enemies, each with different stats configurable in the spawns.ron file. Items can be added in the same file, although new abilities cannot be added without going into the code. Items that can currently be found:
+ - Fireball Scroll
+ - Magic Missile Scroll
+ - Simple Dagger
+ - Simple Shield (which makes you invincible to all but orcs)
+ - Health Potions
+
+You can move around and explore all the maps that will be generated. If you happen to find a '<<', while standing on it, you can press '.' to go deeper in the dungeon.
+
+## Future of Bashing Bytes
+
+I don't honestly know if I will be coming back to it. It has served its purpose, and it was a fun project to take me through a large portion of the pandemic. I may make changes every once in a while, as ideas pop into my head. But it is, as of the time of this writing, unlikely that I return to make large changes, and edit it further.
+
+## Conclusion
+
+Thanks for taking the time to read this. If you find errors, or things that I should change in the code, please let me know and I will get back to you as quick as I can.
